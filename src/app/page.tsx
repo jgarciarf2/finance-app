@@ -143,8 +143,9 @@ export default function Home() {
       setShowIncomeModal(false);
       setIncomeForm({ name: '', amount: '', month: new Date().getMonth() + 1, year: new Date().getFullYear() });
       fetchData(spaceId);
-    } catch (e) {
-      console.error(e);
+    } catch (err: any) {
+      console.error(err);
+      alert('Error al agregar ingreso: ' + (err.message || 'Error desconocido de base de datos.'));
     }
   };
 
@@ -161,8 +162,9 @@ export default function Home() {
       setShowExpenseModal(false);
       setExpenseForm({ name: '', amount: '', category: 'Vivienda' });
       fetchData(spaceId);
-    } catch (e) {
-      console.error(e);
+    } catch (err: any) {
+      console.error(err);
+      alert('Error al agregar egreso fijo: ' + (err.message || 'Error desconocido de base de datos.'));
     }
   };
 
@@ -196,8 +198,9 @@ export default function Home() {
         start_date: new Date().toISOString().split('T')[0]
       });
       fetchData(spaceId);
-    } catch (e) {
-      console.error(e);
+    } catch (err: any) {
+      console.error(err);
+      alert('Error al agregar deuda: ' + (err.message || 'Error desconocido de base de datos.'));
     }
   };
 

@@ -117,15 +117,25 @@ export const db = {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         
-        // Fetch profile to get space_id
+        // Fetch profile to get space_id (using maybeSingle to handle missing profiles gracefully)
         const { data: profile, error: profileError } = await supabase
           .from('profiles')
           .select('space_id')
           .eq('id', data.user?.id)
-          .single();
+          .maybeSingle();
+        
         if (profileError) throw profileError;
         
-        return { user: data.user, space_id: profile.space_id };
+        let space_id = profile?.space_id;
+        if (!space_id && data.user) {
+          // If no profile exists, create one on-the-fly
+          space_id = generateUUID();
+          await supabase
+            .from('profiles')
+            .insert([{ id: data.user.id, email, space_id }]);
+        }
+        
+        return { user: data.user, space_id: space_id || null };
       } else {
         // Mock Auth Sign In
         const users = getLocalData('mock_users');
