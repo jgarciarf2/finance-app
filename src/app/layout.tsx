@@ -57,7 +57,7 @@ export default function RootLayout({
               </a>
               <a href="https://jgarciaf2.github.io" target="_blank" rel="noopener noreferrer" className="footer-item" title="Sitio web">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
-                jgarcia.github.io
+                jgarciarf2.github.io
               </a>
             </div>
           </div>
