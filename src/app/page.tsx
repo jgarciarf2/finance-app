@@ -16,7 +16,9 @@ import {
   RefreshCw, 
   Info,
   ChevronRight,
-  TrendingUp as ProjIcon
+  TrendingUp as ProjIcon,
+  Sun,
+  Moon
 } from 'lucide-react';
 
 export default function Home() {
@@ -58,6 +60,19 @@ export default function Home() {
     cutoff_day: '',   // Día de corte (ej: 25)
     payment_day: ''   // Día de pago (ej: 30)
   });
+
+  // Theme state – persists in localStorage
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+
+  useEffect(() => {
+    const saved = (typeof window !== 'undefined' && localStorage.getItem('fp-theme')) as 'dark' | 'light' | null;
+    if (saved === 'light' || saved === 'dark') setTheme(saved);
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    if (typeof window !== 'undefined') localStorage.setItem('fp-theme', theme);
+  }, [theme]);
 
   // Load user session
   useEffect(() => {
@@ -472,7 +487,17 @@ export default function Home() {
             Proyecciones de Cuotas
           </button>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Theme Toggle */}
+          <button
+            id="theme-toggle"
+            onClick={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
+            className="btn btn-secondary btn-sm"
+            style={{ padding: '8px', borderRadius: '50%', width: '36px', height: '36px' }}
+            title={theme === 'dark' ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro'}
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
           <div className="shared-space-badge">
             <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Espacio Familiar:</div>
             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontFamily: 'monospace', cursor: 'pointer' }} onClick={() => { navigator.clipboard.writeText(spaceId); alert('ID de Espacio copiado al portapapeles.'); }} title="Haz clic para copiar">

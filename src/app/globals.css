@@ -1,25 +1,62 @@
+/* ===== DARK THEME (default) ===== */
 :root {
-  --bg-gradient: radial-gradient(circle at top, #111019 0%, #08070d 100%);
-  --panel-bg: rgba(20, 18, 33, 0.45);
-  --panel-border: rgba(255, 255, 255, 0.07);
-  --panel-glow: rgba(147, 51, 234, 0.05);
+  --bg-gradient: radial-gradient(ellipse at top, #111019 0%, #08070d 100%);
+  --panel-bg: rgba(20, 18, 33, 0.55);
+  --panel-border: rgba(255, 255, 255, 0.08);
+  --panel-glow: rgba(147, 51, 234, 0.06);
   --text-primary: #f3f4f6;
   --text-secondary: #9ca3af;
   --text-muted: #6b7280;
-  
+
   --accent-primary: #8b5cf6;
-  --accent-primary-glow: rgba(139, 92, 246, 0.4);
+  --accent-primary-glow: rgba(139, 92, 246, 0.35);
   --accent-secondary: #ec4899;
   --accent-success: #10b981;
   --accent-danger: #ef4444;
   --accent-warning: #f59e0b;
 
+  --table-row-hover: rgba(255, 255, 255, 0.02);
+  --input-bg: rgba(0, 0, 0, 0.3);
+  --header-bg: rgba(8, 7, 13, 0.6);
+  --modal-bg: #110e1c;
+  --scrollbar-thumb: rgba(139, 92, 246, 0.3);
+  --scrollbar-thumb-hover: rgba(139, 92, 246, 0.6);
+
   --font-sans: var(--font-geist-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 18px;
-  
   --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ===== LIGHT THEME ===== */
+[data-theme="light"] {
+  --bg-gradient: radial-gradient(ellipse at top, #f0edff 0%, #f8f7fc 60%, #fff 100%);
+  --panel-bg: rgba(255, 255, 255, 0.75);
+  --panel-border: rgba(139, 92, 246, 0.12);
+  --panel-glow: rgba(139, 92, 246, 0.04);
+  --text-primary: #1a1523;
+  --text-secondary: #4b5563;
+  --text-muted: #9ca3af;
+
+  --accent-primary: #7c3aed;
+  --accent-primary-glow: rgba(124, 58, 237, 0.2);
+  --accent-secondary: #db2777;
+  --accent-success: #059669;
+  --accent-danger: #dc2626;
+  --accent-warning: #d97706;
+
+  --table-row-hover: rgba(124, 58, 237, 0.03);
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --header-bg: rgba(255, 255, 255, 0.85);
+  --modal-bg: #faf9ff;
+  --scrollbar-thumb: rgba(124, 58, 237, 0.25);
+  --scrollbar-thumb-hover: rgba(124, 58, 237, 0.5);
+}
+
+/* Smooth theme transition on all elements */
+*, *::before, *::after {
+  transition: background-color 0.25s ease, border-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
 }
 
 * {
@@ -44,14 +81,14 @@ body {
   height: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.1);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(139, 92, 246, 0.3);
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(139, 92, 246, 0.6);
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* Background Glowing Orbs */
@@ -120,11 +157,12 @@ body {
   align-items: center;
   padding: 16px 24px;
   border-bottom: 1px solid var(--panel-border);
-  background: rgba(8, 7, 13, 0.5);
-  backdrop-filter: blur(12px);
+  background: var(--header-bg);
+  backdrop-filter: blur(16px);
   position: sticky;
   top: 0;
   z-index: 10;
+  border-bottom: 1px solid var(--panel-border);
 }
 .logo {
   font-size: 1.5rem;
@@ -152,7 +190,7 @@ body {
 }
 .nav-link:hover, .nav-link.active {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(139, 92, 246, 0.08);
 }
 .nav-link.active {
   border-bottom: 2px solid var(--accent-primary);
@@ -201,7 +239,7 @@ body {
   font-weight: 500;
 }
 .form-control {
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--input-bg);
   border: 1px solid var(--panel-border);
   color: var(--text-primary);
   padding: 12px 16px;
@@ -246,12 +284,12 @@ body {
   box-shadow: 0 6px 20px 0 rgba(139, 92, 246, 0.6);
 }
 .btn-secondary {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--table-row-hover);
   border: 1px solid var(--panel-border);
   color: var(--text-primary);
 }
 .btn-secondary:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(139, 92, 246, 0.1);
 }
 .btn-danger {
   background: rgba(239, 68, 68, 0.1);
@@ -283,13 +321,13 @@ body {
   padding: 16px;
 }
 .modal-content {
-  background: #110e1c;
+  background: var(--modal-bg);
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-md);
   max-width: 500px;
   width: 100%;
   padding: 28px;
-  box-shadow: 0 20px 50px 0 rgba(0, 0, 0, 0.5);
+  box-shadow: 0 20px 50px 0 rgba(0, 0, 0, 0.35);
   animation: modalEnter 0.3s ease;
 }
 @keyframes modalEnter {
@@ -302,7 +340,7 @@ body {
   overflow-x: auto;
   border-radius: var(--radius-sm);
   border: 1px solid var(--panel-border);
-  background: rgba(0, 0, 0, 0.2);
+  background: transparent;
 }
 .data-table {
   width: 100%;
@@ -311,7 +349,7 @@ body {
   font-size: 0.95rem;
 }
 .data-table th {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--table-row-hover);
   padding: 14px 18px;
   font-weight: 600;
   color: var(--text-secondary);
@@ -322,7 +360,7 @@ body {
 }
 .data-table td {
   padding: 14px 18px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--panel-border);
   color: var(--text-primary);
   vertical-align: middle;
 }
@@ -330,7 +368,7 @@ body {
   border-bottom: none;
 }
 .data-table tr:hover td {
-  background: rgba(255, 255, 255, 0.01);
+  background: var(--table-row-hover);
 }
 
 /* Section Grid */
