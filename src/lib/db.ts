@@ -326,6 +326,23 @@ export const db = {
       }
     },
 
+    async update(id: string, data: Partial<Omit<Debt, 'id' | 'space_id'>>): Promise<void> {
+      if (useSupabase && supabase) {
+        const { error } = await supabase
+          .from('debts')
+          .update(data)
+          .eq('id', id);
+        if (error) throw error;
+      } else {
+        const debts = getLocalData('mock_debts');
+        const idx = debts.findIndex(d => d.id === id);
+        if (idx !== -1) {
+          debts[idx] = { ...debts[idx], ...data };
+          setLocalData('mock_debts', debts);
+        }
+      }
+    },
+
     async delete(id: string): Promise<void> {
       if (useSupabase && supabase) {
         const { error } = await supabase
