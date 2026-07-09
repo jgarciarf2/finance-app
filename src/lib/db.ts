@@ -51,6 +51,8 @@ export interface Debt {
   fixed_capital_payment: number;
   start_date: string;
   has_interest: boolean;
+  cutoff_day?: number | null;   // Día de corte de la tarjeta (1-31)
+  payment_day?: number | null;  // Día de pago real (1-31)
 }
 
 // Generate UUID for mock

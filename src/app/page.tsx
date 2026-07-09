@@ -54,7 +54,9 @@ export default function Home() {
     total_installments: '12', 
     installments_paid: '0',
     has_interest: false,
-    start_date: new Date().toISOString().split('T')[0]
+    start_date: new Date().toISOString().split('T')[0],
+    cutoff_day: '',   // Día de corte (ej: 25)
+    payment_day: ''   // Día de pago (ej: 30)
   });
 
   // Load user session
@@ -185,7 +187,9 @@ export default function Home() {
         installments_paid: parseInt(debtForm.installments_paid),
         fixed_capital_payment,
         start_date: debtForm.start_date,
-        has_interest: debtForm.has_interest
+        has_interest: debtForm.has_interest,
+        cutoff_day: debtForm.cutoff_day ? parseInt(debtForm.cutoff_day) : null,
+        payment_day: debtForm.payment_day ? parseInt(debtForm.payment_day) : null,
       });
       setShowDebtModal(false);
       setDebtForm({
@@ -195,7 +199,9 @@ export default function Home() {
         total_installments: '12',
         installments_paid: '0',
         has_interest: false,
-        start_date: new Date().toISOString().split('T')[0]
+        start_date: new Date().toISOString().split('T')[0],
+        cutoff_day: '',
+        payment_day: ''
       });
       fetchData(spaceId);
     } catch (err: any) {
@@ -264,6 +270,7 @@ export default function Home() {
   const getProjections = () => {
     const months = [];
     const currentDate = new Date();
+    const todayDay = currentDate.getDate(); // día actual del mes (ej: 9)
     
     let currentIncomesBase = totalIncomes;
     
@@ -274,13 +281,36 @@ export default function Home() {
       // Calculate debts active in this simulated month
       let simulatedDebtsQuota = 0;
       const simulatedDebtsList = debts.map(debt => {
-        // Find how many months have passed between start_date and simDate
         const start = new Date(debt.start_date);
-        const diffMonths = (simDate.getFullYear() - start.getFullYear()) * 12 + (simDate.getMonth() - start.getMonth());
+
+        // --- Billing cycle shift ---
+        // If this debt has a cutoff_day, we need to determine in which calendar month
+        // the payment actually falls. The rule:
+        //   • If the PURCHASE date's day > cutoff_day → the first billing cycle closes
+        //     the NEXT month after the purchase month, so we add 1 month to the "clock".
+        //   • Additionally, when iterating simulated months (i=0 = this month),
+        //     if today's day > cutoff_day the CURRENT cycle has already closed, meaning
+        //     the next payment will appear in the month that contains the payment_day.
+        let billingOffset = 0;
+        if (debt.cutoff_day) {
+          // If start date day is after cutoff, first payment is pushed to +1 month
+          if (start.getDate() > debt.cutoff_day) {
+            billingOffset = 1;
+          }
+          // For the very first simulated month (current month):
+          // if today we're already past the cutoff, this month's cycle is closed,
+          // the next payment is for NEXT month's cycle → shift forward 1 extra month.
+          if (i === 0 && todayDay > debt.cutoff_day) {
+            billingOffset += 1;
+          }
+        }
+
+        const adjustedStart = new Date(start.getFullYear(), start.getMonth() + billingOffset, 1);
+        const diffMonths = (simDate.getFullYear() - adjustedStart.getFullYear()) * 12 + (simDate.getMonth() - adjustedStart.getMonth());
         
-        // If the simulation is before start date or after total installments are paid
+        // If the simulation is before the adjusted start or past total installments
         if (diffMonths < 0 || diffMonths >= debt.total_installments) {
-          return { name: debt.name, quota: 0, remaining: 0 };
+          return { name: debt.name, quota: 0, remaining: 0, cutoff_day: debt.cutoff_day, payment_day: debt.payment_day };
         }
         
         const remainingBefore = debt.total_capital - (diffMonths * debt.fixed_capital_payment);
@@ -291,7 +321,9 @@ export default function Home() {
         return {
           name: debt.name,
           quota,
-          remaining: remainingBefore - debt.fixed_capital_payment
+          remaining: remainingBefore - debt.fixed_capital_payment,
+          cutoff_day: debt.cutoff_day,
+          payment_day: debt.payment_day,
         };
       });
 
@@ -310,6 +342,7 @@ export default function Home() {
     }
     return months;
   };
+
 
   const projections = getProjections();
 
@@ -610,7 +643,23 @@ export default function Home() {
                       ) : (
                         activeDebtsDetails.map(debt => (
                           <tr key={debt.id} style={{ opacity: debt.installments_paid >= debt.total_installments ? 0.5 : 1 }}>
-                            <td style={{ fontWeight: 500 }}>{debt.name}</td>
+                            <td style={{ fontWeight: 500 }}>
+                              <div>{debt.name}</div>
+                              {(debt.cutoff_day || debt.payment_day) && (
+                                <div style={{ display: 'flex', gap: '6px', marginTop: '4px', flexWrap: 'wrap' }}>
+                                  {debt.cutoff_day && (
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'rgba(245, 158, 11, 0.12)', color: '#fbbf24', borderRadius: '4px', border: '1px solid rgba(245,158,11,0.2)' }}>
+                                      ✂️ Corte: día {debt.cutoff_day}
+                                    </span>
+                                  )}
+                                  {debt.payment_day && (
+                                    <span style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'rgba(139, 92, 246, 0.12)', color: '#c084fc', borderRadius: '4px', border: '1px solid rgba(139,92,246,0.2)' }}>
+                                      💳 Pago: día {debt.payment_day}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </td>
                             <td>${debt.total_capital.toLocaleString('es-ES')}</td>
                             <td>{debt.has_interest ? `${debt.monthly_interest_rate}%` : 'Sin interés'}</td>
                             <td>
@@ -834,14 +883,23 @@ export default function Home() {
                           ${proj.cashFlow.toLocaleString('es-ES')}
                         </td>
                         <td>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                             {proj.debts.length === 0 ? (
                               <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>🎉 ¡Sin deudas!</span>
                             ) : (
                               proj.debts.map((d, dIdx) => (
-                                <div key={dIdx} style={{ fontSize: '0.8rem', display: 'flex', gap: '6px', justifyContent: 'space-between' }}>
-                                  <span style={{ color: 'var(--text-secondary)' }}>{d.name}:</span>
-                                  <span style={{ color: 'var(--accent-warning)', fontWeight: 600 }}>${Math.round(d.quota).toLocaleString('es-ES')}</span>
+                                <div key={dIdx} style={{ fontSize: '0.8rem' }}>
+                                  <div style={{ display: 'flex', gap: '6px', justifyContent: 'space-between' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>{d.name}:</span>
+                                    <span style={{ color: 'var(--accent-warning)', fontWeight: 600 }}>${Math.round(d.quota).toLocaleString('es-ES')}</span>
+                                  </div>
+                                  {d.payment_day && (
+                                    <div style={{ marginTop: '2px' }}>
+                                      <span style={{ fontSize: '0.68rem', padding: '1px 6px', background: 'rgba(139, 92, 246, 0.1)', color: '#a78bfa', borderRadius: '4px' }}>
+                                        💳 Vence día {d.payment_day}
+                                      </span>
+                                    </div>
+                                  )}
                                 </div>
                               ))
                             )}
@@ -1064,6 +1122,47 @@ export default function Home() {
                   />
                 </div>
               )}
+
+              {/* Billing cycle fields */}
+              <div style={{ borderTop: '1px solid var(--panel-border)', paddingTop: '16px', marginTop: '8px' }}>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '12px', display: 'flex', gap: '6px', alignItems: 'flex-start' }}>
+                  <span style={{ fontSize: '1rem' }}>💳</span>
+                  <span><strong style={{ color: 'var(--text-secondary)' }}>Ciclo de facturación</strong> (opcional) — Configura esto si es una tarjeta de crédito para que las proyecciones reflejen el mes correcto de pago.</span>
+                </div>
+                <div className="form-row">
+                  <div className="form-group">
+                    <label>Día de Corte</label>
+                    <input 
+                      type="number" 
+                      min="1"
+                      max="31"
+                      className="form-control" 
+                      placeholder="Ej. 25" 
+                      value={debtForm.cutoff_day} 
+                      onChange={(e) => setDebtForm({ ...debtForm, cutoff_day: e.target.value })}
+                    />
+                    <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>Día del mes en que cierra el ciclo</small>
+                  </div>
+                  <div className="form-group">
+                    <label>Día de Pago</label>
+                    <input 
+                      type="number" 
+                      min="1"
+                      max="31"
+                      className="form-control" 
+                      placeholder="Ej. 30" 
+                      value={debtForm.payment_day} 
+                      onChange={(e) => setDebtForm({ ...debtForm, payment_day: e.target.value })}
+                    />
+                    <small style={{ color: 'var(--text-muted)', fontSize: '0.72rem' }}>Día en que realizas el pago</small>
+                  </div>
+                </div>
+                {debtForm.cutoff_day && debtForm.payment_day && (
+                  <div style={{ padding: '10px 14px', background: 'rgba(139, 92, 246, 0.08)', border: '1px solid rgba(139, 92, 246, 0.2)', borderRadius: '8px', fontSize: '0.8rem', color: 'var(--accent-primary)' }}>
+                    📅 Las cuotas se calcularán considerando que el ciclo cierra el día <strong>{debtForm.cutoff_day}</strong> y pagas el día <strong>{debtForm.payment_day}</strong> del mes siguiente.
+                  </div>
+                )}
+              </div>
 
               <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', marginTop: '24px' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setShowDebtModal(false)}>Cancelar</button>
