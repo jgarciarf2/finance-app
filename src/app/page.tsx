@@ -407,7 +407,7 @@ export default function Home() {
     <>
       {/* ---- HEADER ---- */}
       <header className="main-header">
-        <div className="logo">💰 Finanzas Pro</div>
+        <div className="logo">💰 <span className="logo-text">Finanzas Pro</span></div>
 
         <div className="nav-links">
           <button className={`nav-link ${currentTab === 'dashboard' ? 'active' : ''}`} onClick={() => setCurrentTab('dashboard')}>

@@ -152,7 +152,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 16px;
   height: 52px;
   background: var(--header-bg);
   backdrop-filter: saturate(180%) blur(20px);
@@ -161,6 +161,7 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
+  gap: 8px;
 }
 
 .logo {
@@ -169,8 +170,10 @@ body {
   color: var(--text-primary);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   letter-spacing: -0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .nav-links {
@@ -216,9 +219,17 @@ body {
 .dashboard-container {
   max-width: 1320px;
   margin: 0 auto;
-  padding: 32px 24px;
+  padding: 20px 16px;
   width: 100%;
   flex: 1;
+}
+
+@media (min-width: 640px) {
+  .dashboard-container { padding: 28px 24px; }
+}
+
+@media (min-width: 1024px) {
+  .dashboard-container { padding: 32px 32px; }
 }
 
 .dashboard-grid {
@@ -275,9 +286,17 @@ body {
    ============================================= */
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 14px;
-  margin-bottom: 24px;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+@media (min-width: 640px) {
+  .summary-grid {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+  }
 }
 
 .stat-card {
@@ -285,28 +304,40 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-xs);
-  padding: 20px 22px;
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   position: relative;
   overflow: hidden;
 }
 
+@media (min-width: 640px) {
+  .stat-card { padding: 20px 22px; gap: 6px; }
+}
+
 .stat-label {
-  font-size: 0.75rem;
-  font-weight: 500;
+  font-size: 0.68rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-muted);
 }
 
+@media (min-width: 640px) {
+  .stat-label { font-size: 0.75rem; }
+}
+
 .stat-value {
-  font-size: 2rem;
+  font-size: 1.45rem;
   font-weight: 700;
   letter-spacing: -0.04em;
   line-height: 1;
   color: var(--text-primary);
+}
+
+@media (min-width: 640px) {
+  .stat-value { font-size: 2rem; }
 }
 
 .stat-value.green  { color: var(--green); }
@@ -1236,3 +1267,153 @@ input:checked + .slider::before { transform: translateX(20px); background: #fff;
   to   { transform: rotate(360deg); }
 }
 .spin { animation: spin 1s linear infinite; }
+
+/* =============================================
+   MOBILE RESPONSIVE — < 640px
+   ============================================= */
+@media (max-width: 639px) {
+
+  /* Header — hide logo text, keep icon only */
+  .logo-text { display: none; }
+
+  .nav-links {
+    /* Move nav to the very bottom of viewport as a tab bar */
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    border-radius: 0;
+    border: none;
+    border-top: 1px solid var(--border);
+    background: var(--header-bg);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    padding: 8px 16px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+    gap: 0;
+    justify-content: space-around;
+    display: flex;
+  }
+
+  .nav-link {
+    flex: 1;
+    text-align: center;
+    padding: 6px 4px;
+    font-size: 0.72rem;
+    border-radius: 8px;
+  }
+
+  /* Add bottom padding to content so it clears the tab bar */
+  .dashboard-container {
+    padding-bottom: 80px;
+  }
+
+  /* Cards: tighter padding */
+  .card { padding: 16px; border-radius: var(--radius-md); }
+  .card-sm { padding: 12px; }
+
+  /* Section header: wrap if needed */
+  .section-header {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .section-header > .btn {
+    flex-shrink: 0;
+  }
+
+  /* FCF Banner: stack on mobile */
+  .fcf-banner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 14px 16px;
+  }
+
+  .fcf-banner-amount {
+    font-size: 1.4rem;
+  }
+
+  /* Debt card body: 2 cols instead of 3 */
+  .debt-card-body {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .debt-card-header { padding: 14px 14px 0; }
+  .debt-progress-bar { margin: 0 14px; }
+  .debt-progress-label { padding: 4px 14px 0; }
+  .debt-next-quota { margin: 10px 14px; padding: 10px 12px; }
+  .debt-card-actions { padding: 0 14px 12px; gap: 6px; }
+  .debt-card-body { padding: 10px 14px; gap: 10px; }
+
+  /* Debt action buttons: allow wrapping */
+  .debt-card-actions .btn-success {
+    width: 100%;
+    justify-content: center;
+  }
+
+  /* Tables: allow horizontal scroll */
+  .table-wrapper { border-radius: var(--radius-sm); }
+  .data-table { min-width: 480px; }
+
+  /* Projection table */
+  .projection-table-wrapper { border-radius: var(--radius-sm); }
+  .projection-table { min-width: 580px; }
+
+  /* Modals: full screen on mobile */
+  .modal-overlay { padding: 0; align-items: flex-end; }
+  .modal-content {
+    max-width: 100%;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    max-height: 92vh;
+    padding: 24px 20px;
+    padding-bottom: max(24px, env(safe-area-inset-bottom));
+  }
+  .modal-content.modal-wide {
+    max-width: 100%;
+    max-height: 92vh;
+  }
+
+  /* Form row: single column on mobile */
+  .form-row { grid-template-columns: 1fr; gap: 0; }
+
+  /* Auth card: full width */
+  .auth-card { border-radius: var(--radius-xl) var(--radius-xl) 0 0; }
+
+  /* Footer: hide on mobile to save space */
+  .app-footer { display: none; }
+
+  /* Header: shrink spacing */
+  .main-header { padding: 0 12px; height: 48px; }
+  .header-actions { gap: 4px; }
+  .btn-icon { width: 32px; height: 32px; padding: 6px; }
+
+  /* Debt name smaller on mobile */
+  .debt-name { font-size: 0.92rem; }
+  .debt-stat-value { font-size: 0.9rem; }
+  .debt-stat-label { font-size: 0.65rem; }
+
+  /* Next quota row: stack amount below label */
+  .debt-next-quota {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  .debt-next-quota-amount { font-size: 1rem; }
+}
+
+/* =============================================
+   TABLET — 640px → 1099px
+   ============================================= */
+@media (min-width: 640px) and (max-width: 1099px) {
+  .card { padding: 20px; }
+
+  .debt-card-body {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  /* Form row stays 2 col */
+  .form-row { grid-template-columns: 1fr 1fr; }
+}
