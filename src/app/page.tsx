@@ -132,6 +132,8 @@ export default function Home() {
   const [currentTab, setCurrentTab]   = useState<Tab>('dashboard');
   const [theme, setTheme]             = useState<'dark' | 'light'>('dark');
   const [copied, setCopied]           = useState(false);
+  const [showBillingSummary, setShowBillingSummary] = useState(false);
+
 
   /* data */
   const [incomes, setIncomes]             = useState<Income[]>([]);
@@ -578,64 +580,93 @@ export default function Home() {
             {/* ── BILLING SUMMARY (Resumen del Mes por Tarjeta) ── */}
             {billingSummary.length > 0 && (
               <div style={{ marginBottom: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-                  <CardIcon size={16} />
-                  <span className="section-title">Resumen del mes — Próximas cuotas</span>
-                </div>
-
-                <div className="billing-summary">
-                  {billingSummary.map((group, gi) => {
-                    const billing = group.card ? getBillingInfo(group.card.cutoff_day) : null;
-                    const daysLeft = billing?.daysUntilPay ?? null;
-                    return (
-                      <div key={gi} className="billing-card">
-                        <div className="billing-card-header">
-                          <div className="billing-card-name">
-                            {group.card ? <><div className="credit-card-chip" style={{ width: 22, height: 16 }} />{group.card.name}</> : <><Receipt size={14} />Sin tarjeta asignada</>}
-                          </div>
-                          {billing && (
-                            <div className="billing-card-meta">
-                              <span className="billing-meta-item"><Scissors size={11} />Corte: <strong>{dateLabel(billing.cutoffDate)}</strong></span>
-                              <span className="billing-meta-item"><Calendar size={11} />Pago límite: <strong>{dateLabel(billing.payDeadline)}</strong></span>
-                              <span className={`billing-deadline-badge ${daysLeft !== null && daysLeft <= 5 ? 'urgent' : daysLeft !== null && daysLeft > 15 ? 'ok' : ''}`}>
-                                <Clock size={10} />
-                                {daysLeft !== null && daysLeft > 0 ? `${daysLeft} días para pagar` : 'Pago vencido'}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="billing-rows">
-                          {group.debts.map((debt, di) => (
-                            <div key={di} className="billing-row">
-                              <span className="billing-row-name">{debt.name}</span>
-                              <span className="billing-row-installment">Cuota #{debt.installments_paid + 1}/{debt.total_installments}</span>
-                              <span className="billing-row-amount">{fmt(debt.currentQuota)}</span>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="billing-card-footer">
-                          <span className="billing-card-total-label">
-                            {group.card ? `Total ${group.card.name}` : 'Total sin tarjeta'}
-                          </span>
-                          <span className="billing-card-total-amount">{fmt(group.total)}</span>
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {/* Grand total */}
-                  <div className="billing-grand-total">
+                <button
+                  onClick={() => setShowBillingSummary(!showBillingSummary)}
+                  style={{
+                    width: '100%',
+                    background: 'var(--surface)',
+                    border: '1px solid var(--border)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '14px 18px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: spaceId ? 'space-between' : 'center',
+                    cursor: 'pointer',
+                    outline: 'none',
+                    textAlign: 'left',
+                    boxShadow: 'var(--shadow-xs)',
+                    transition: 'var(--transition)'
+                  }}
+                  className="accordion-toggle"
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <CardIcon size={18} style={{ color: 'var(--orange)' }} />
                     <div>
-                      <div className="billing-grand-label">Total a pagar este mes</div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>Suma de todas las cuotas activas</div>
+                      <span className="section-title" style={{ fontSize: '0.92rem', margin: 0, display: 'block' }}>Resumen del mes — Próximas cuotas</span>
+                      <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                        {showBillingSummary ? 'Haz clic para contraer detalles' : `Total de cuotas de este mes: ${fmt(totalDebtQuota)} (clic para ver detalles)`}
+                      </span>
                     </div>
-                    <div className="billing-grand-amount">{fmt(totalDebtQuota)}</div>
                   </div>
-                </div>
+                  {showBillingSummary ? <Eye size={16} style={{ color: 'var(--text-muted)' }} /> : <ChevronRight size={16} style={{ color: 'var(--text-muted)' }} />}
+                </button>
+
+                {showBillingSummary && (
+                  <div className="billing-summary" style={{ marginTop: 12 }}>
+                    {billingSummary.map((group, gi) => {
+                      const billing = group.card ? getBillingInfo(group.card.cutoff_day) : null;
+                      const daysLeft = billing?.daysUntilPay ?? null;
+                      return (
+                        <div key={gi} className="billing-card">
+                          <div className="billing-card-header">
+                            <div className="billing-card-name">
+                              {group.card ? <><div className="credit-card-chip" style={{ width: 22, height: 16 }} />{group.card.name}</> : <><Receipt size={14} />Sin tarjeta asignada</>}
+                            </div>
+                            {billing && (
+                              <div className="billing-card-meta">
+                                <span className="billing-meta-item"><Scissors size={11} />Corte: <strong>{dateLabel(billing.cutoffDate)}</strong></span>
+                                <span className="billing-meta-item"><Calendar size={11} />Pago límite: <strong>{dateLabel(billing.payDeadline)}</strong></span>
+                                <span className={`billing-deadline-badge ${daysLeft !== null && daysLeft <= 5 ? 'urgent' : daysLeft !== null && daysLeft > 15 ? 'ok' : ''}`}>
+                                  <Clock size={10} />
+                                  {daysLeft !== null && daysLeft > 0 ? `${daysLeft} días para pagar` : 'Pago vencido'}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="billing-rows">
+                            {group.debts.map((debt, di) => (
+                              <div key={di} className="billing-row">
+                                <span className="billing-row-name">{debt.name}</span>
+                                <span className="billing-row-installment">Cuota #{debt.installments_paid + 1}/{debt.total_installments}</span>
+                                <span className="billing-row-amount">{fmt(debt.currentQuota)}</span>
+                              </div>
+                            ))}
+                          </div>
+
+                          <div className="billing-card-footer">
+                            <span className="billing-card-total-label">
+                              {group.card ? `Total ${group.card.name}` : 'Total sin tarjeta'}
+                            </span>
+                            <span className="billing-card-total-amount">{fmt(group.total)}</span>
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Grand total */}
+                    <div className="billing-grand-total">
+                      <div>
+                        <div className="billing-grand-label">Total a pagar este mes</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 2 }}>Suma de todas las cuotas activas</div>
+                      </div>
+                      <div className="billing-grand-amount">{fmt(totalDebtQuota)}</div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
+
 
             {/* Dashboard Grid */}
             <div className="dashboard-grid">
