@@ -53,6 +53,35 @@ export interface Debt {
   has_interest: boolean;
   cutoff_day?: number | null;   // Día de corte de la tarjeta (1-31)
   payment_day?: number | null;  // Día de pago real (1-31)
+  card_id?: string | null;      // Referencia a la tarjeta de crédito
+}
+
+export interface Card {
+  id: string;
+  space_id: string;
+  name: string;        // Ej. "Visa Bancolombia"
+  cutoff_day: number;  // Día en que cierra el ciclo (1-31)
+}
+
+export interface Family {
+  id: string;
+  invite_code: string;
+  name: string;
+}
+
+export interface FamilyMember {
+  id: string;       // user id
+  email: string;
+  space_id: string;
+  family_id: string;
+}
+
+export interface MemberSummary {
+  member: FamilyMember;
+  totalIncome: number;
+  totalExpenses: number;
+  totalDebtQuota: number;
+  freeCashFlow: number;
 }
 
 // Generate UUID for mock
@@ -356,5 +385,171 @@ export const db = {
         setLocalData('mock_debts', filtered);
       }
     }
+  },
+
+  // ── Cards ──────────────────────────────────────────────
+  cards: {
+    async list(spaceId: string): Promise<Card[]> {
+      if (useSupabase && supabase) {
+        const { data, error } = await supabase
+          .from('cards')
+          .select('*')
+          .eq('space_id', spaceId)
+          .order('name');
+        if (error) throw error;
+        return data || [];
+      } else {
+        return getLocalData('mock_cards').filter((c: Card) => c.space_id === spaceId);
+      }
+    },
+
+    async create(card: Omit<Card, 'id'>): Promise<Card> {
+      const newCard = { ...card, id: generateUUID() };
+      if (useSupabase && supabase) {
+        const { data, error } = await supabase
+          .from('cards')
+          .insert([newCard])
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      } else {
+        const cards = getLocalData('mock_cards');
+        cards.push(newCard);
+        setLocalData('mock_cards', cards);
+        return newCard;
+      }
+    },
+
+    async update(id: string, data: Partial<Omit<Card, 'id' | 'space_id'>>): Promise<void> {
+      if (useSupabase && supabase) {
+        const { error } = await supabase
+          .from('cards')
+          .update(data)
+          .eq('id', id);
+        if (error) throw error;
+      } else {
+        const cards = getLocalData('mock_cards');
+        const idx = cards.findIndex((c: Card) => c.id === id);
+        if (idx !== -1) {
+          cards[idx] = { ...cards[idx], ...data };
+          setLocalData('mock_cards', cards);
+        }
+      }
+    },
+
+    async delete(id: string): Promise<void> {
+      if (useSupabase && supabase) {
+        const { error } = await supabase
+          .from('cards')
+          .delete()
+          .eq('id', id);
+        if (error) throw error;
+      } else {
+        const cards = getLocalData('mock_cards');
+        setLocalData('mock_cards', cards.filter((c: Card) => c.id !== id));
+      }
+    }
+  },
+
+  // ── Families ────────────────────────────────────────────
+  families: {
+    /** Get the current user's family + all members */
+    async getMyFamily(userId: string): Promise<{ family: Family; members: FamilyMember[] } | null> {
+      if (!useSupabase || !supabase) return null; // requires Supabase
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('family_id')
+        .eq('id', userId)
+        .single();
+
+      if (!profile?.family_id) return null;
+
+      const [familyRes, membersRes] = await Promise.all([
+        supabase.from('families').select('*').eq('id', profile.family_id).single(),
+        supabase.from('profiles').select('id, email, space_id, family_id').eq('family_id', profile.family_id),
+      ]);
+
+      if (familyRes.error || !familyRes.data) return null;
+      return { family: familyRes.data, members: membersRes.data || [] };
+    },
+
+    /** Create a new family and set it on the current user's profile */
+    async create(userId: string, name: string): Promise<Family> {
+      if (!useSupabase || !supabase) throw new Error('Requiere Supabase');
+
+      // Generate 6-char invite code
+      const invite_code = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      const { data: family, error: fErr } = await supabase
+        .from('families')
+        .insert([{ name, invite_code }])
+        .select()
+        .single();
+      if (fErr) throw fErr;
+
+      const { error: pErr } = await supabase
+        .from('profiles')
+        .update({ family_id: family.id })
+        .eq('id', userId);
+      if (pErr) throw pErr;
+
+      return family;
+    },
+
+    /** Join a family using an invite code */
+    async join(userId: string, inviteCode: string): Promise<Family> {
+      if (!useSupabase || !supabase) throw new Error('Requiere Supabase');
+
+      const { data: family, error: fErr } = await supabase
+        .from('families')
+        .select('*')
+        .eq('invite_code', inviteCode.toUpperCase().trim())
+        .single();
+      if (fErr || !family) throw new Error('Código de familia inválido o no encontrado');
+
+      const { error: pErr } = await supabase
+        .from('profiles')
+        .update({ family_id: family.id })
+        .eq('id', userId);
+      if (pErr) throw pErr;
+
+      return family;
+    },
+
+    /** Leave the current family */
+    async leave(userId: string): Promise<void> {
+      if (!useSupabase || !supabase) throw new Error('Requiere Supabase');
+      const { error } = await supabase
+        .from('profiles')
+        .update({ family_id: null })
+        .eq('id', userId);
+      if (error) throw error;
+    },
+
+    /** Get aggregated financial summary for one member (by their space_id) */
+    async getMemberSummary(spaceId: string): Promise<{ totalIncome: number; totalExpenses: number; totalDebtQuota: number }> {
+      if (!useSupabase || !supabase) return { totalIncome: 0, totalExpenses: 0, totalDebtQuota: 0 };
+
+      const now = new Date();
+      const [incRes, expRes, debtRes] = await Promise.all([
+        supabase.from('incomes').select('amount').eq('space_id', spaceId)
+          .eq('month', now.getMonth() + 1).eq('year', now.getFullYear()),
+        supabase.from('fixed_expenses').select('amount').eq('space_id', spaceId),
+        supabase.from('debts').select('total_capital, monthly_interest_rate, total_installments, installments_paid, fixed_capital_payment, has_interest').eq('space_id', spaceId),
+      ]);
+
+      const totalIncome   = (incRes.data  || []).reduce((a: number, r: any) => a + r.amount, 0);
+      const totalExpenses = (expRes.data  || []).reduce((a: number, r: any) => a + r.amount, 0);
+      const totalDebtQuota = (debtRes.data || []).reduce((a: number, d: any) => {
+        if (d.installments_paid >= d.total_installments) return a;
+        const remaining = d.total_capital - d.installments_paid * d.fixed_capital_payment;
+        const interest  = d.has_interest ? remaining * (d.monthly_interest_rate / 100) : 0;
+        return a + d.fixed_capital_payment + interest;
+      }, 0);
+
+      return { totalIncome, totalExpenses, totalDebtQuota };
+    },
   }
 };
