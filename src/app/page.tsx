@@ -861,22 +861,72 @@ export default function Home() {
                 <LineAreaChart data={lineChartData} height={170} />
               </div>
             )}
-            <div className="projection-table-wrapper">
-              <table className="projection-table">
-                <thead><tr><th>Mes</th><th className="text-right">Ingresos</th><th className="text-right">Egresos fijos</th><th className="text-right">Cuotas</th><th className="text-right">Flujo libre</th><th>Detalle</th></tr></thead>
-                <tbody>
-                  {projections.map((proj, i) => (
-                    <tr key={i} className={proj.isDebtFree && i > 0 && !projections[i - 1].isDebtFree ? 'debt-free' : ''}>
-                      <td><div className="month-label">{proj.label}</div>{proj.isDebtFree && i > 0 && !projections[i - 1].isDebtFree && <span className="badge badge-green" style={{ marginTop: 4 }}><Sparkles size={10} style={{ display: 'inline', marginRight: 3 }} />Libre de deudas</span>}</td>
-                      <td className="text-right"><span className="proj-amount green">{fmt(proj.incomes)}</span></td>
-                      <td className="text-right"><span className="proj-amount red">{fmt(proj.fixedExpenses)}</span></td>
-                      <td className="text-right">{proj.debtsQuota > 0 ? <span className="proj-amount orange">{fmt(proj.debtsQuota)}</span> : <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>—</span>}</td>
-                      <td className="text-right"><span className={`proj-amount ${proj.cashFlow >= 0 ? 'green' : 'red'}`}>{proj.cashFlow >= 0 ? '+' : ''}{fmt(proj.cashFlow)}</span></td>
-                      <td>{proj.debtItems.length === 0 ? <span style={{ color: 'var(--text-muted)', fontSize: '0.78rem' }}>Sin cuotas</span> : proj.debtItems.map((d, j) => <div key={j} style={{ fontSize: '0.78rem' }}><span style={{ color: 'var(--text-secondary)' }}>{d.name}: </span><span style={{ color: 'var(--orange)', fontWeight: 700 }}>{fmt(d.quota)}</span></div>)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              {projections.map((proj, i) => (
+                <div className="excel-card card" key={i}>
+                  <div className="excel-card-header">
+                    <div className="excel-month-title">{proj.label}</div>
+                    {proj.isDebtFree ? (
+                      <span className="badge badge-green"><Sparkles size={10} style={{ display: 'inline', marginRight: 3 }} />Libre de deudas</span>
+                    ) : (
+                      <span className="badge badge-gray"><Clock size={10} style={{ display: 'inline', marginRight: 3 }} />Deudas activas</span>
+                    )}
+                  </div>
+
+                  <div className="excel-table-wrapper">
+                    <table className="excel-table">
+                      <thead>
+                        <tr>
+                          <th>Concepto / Descripción</th>
+                          <th>Tipo</th>
+                          <th className="text-right">Monto</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {incomes.map((inc, idx) => (
+                          <tr key={`inc-${idx}`}>
+                            <td>{inc.name}</td>
+                            <td><span className="badge-green-subtle">Ingreso</span></td>
+                            <td className="text-right text-green">+{fmt(inc.amount)}</td>
+                          </tr>
+                        ))}
+                        {fixedExpenses.map((exp, idx) => (
+                          <tr key={`exp-${idx}`}>
+                            <td>{exp.name}</td>
+                            <td><span className="badge-red-subtle">Egreso fijo</span></td>
+                            <td className="text-right text-red">-{fmt(exp.amount)}</td>
+                          </tr>
+                        ))}
+                        {proj.debtItems.map((debt, idx) => (
+                          <tr key={`debt-${idx}`}>
+                            <td>{debt.name}</td>
+                            <td><span className="badge-orange-subtle">Cuota deuda</span></td>
+                            <td className="text-right text-orange">-{fmt(debt.quota)}</td>
+                          </tr>
+                        ))}
+
+                        <tr className="excel-total-row">
+                          <td><strong>Total Ingresos</strong></td>
+                          <td></td>
+                          <td className="text-right text-green"><strong>{fmt(proj.incomes)}</strong></td>
+                        </tr>
+                        <tr className="excel-total-row">
+                          <td><strong>Total Egresos</strong></td>
+                          <td></td>
+                          <td className="text-right text-red"><strong>-{fmt(proj.fixedExpenses + proj.debtsQuota)}</strong></td>
+                        </tr>
+                        <tr className="excel-summary-row">
+                          <td><strong>Flujo Libre (Balance)</strong></td>
+                          <td></td>
+                          <td className={`text-right ${proj.cashFlow >= 0 ? 'text-green' : 'text-red'}`}>
+                            <strong>{proj.cashFlow >= 0 ? '+' : ''}{fmt(proj.cashFlow)}</strong>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
