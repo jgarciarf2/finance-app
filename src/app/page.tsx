@@ -112,6 +112,67 @@ function HBar({ value, max, color }: { value: number; max: number; color: string
   return <div className="progress-bar" style={{ height: 6 }}><div className="progress-fill" style={{ width: `${pct}%`, background: color }} /></div>;
 }
 
+/* ── Debt form card selector helper ─────────────────────── */
+const DebtFormFields = ({ form, setForm, cards }: {
+  form: any;
+  setForm: (f: any) => void;
+  cards: Card[];
+}) => {
+  const selectedCard = cards.find(c => c.id === form.card_id);
+  return (
+    <>
+      <div className="form-group"><label>Nombre de la deuda</label><input type="text" className="form-control" placeholder="Ej. Tarjeta Visa — Computador" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></div>
+      <div className="form-row">
+        <div className="form-group"><label>Monto financiado ($)</label><input type="number" className="form-control" placeholder="Ej. 1200000" value={form.total_capital} onChange={e => setForm({ ...form, total_capital: e.target.value })} required /></div>
+        <div className="form-group"><label>Cuotas totales</label><input type="number" className="form-control" placeholder="Ej. 12" value={form.total_installments} onChange={e => setForm({ ...form, total_installments: e.target.value })} required /></div>
+      </div>
+      <div className="form-row">
+        <div className="form-group"><label>Cuotas ya pagadas</label><input type="number" className="form-control" placeholder="0" value={form.installments_paid} onChange={e => setForm({ ...form, installments_paid: e.target.value })} required /></div>
+        <div className="form-group"><label>Fecha de compra</label><input type="date" className="form-control" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} required /></div>
+      </div>
+      <div className="form-group">
+        <div className="switch-group" onClick={() => setForm({ ...form, has_interest: !form.has_interest })}>
+          <span className="switch"><input type="checkbox" checked={form.has_interest} onChange={() => {}} /><span className="slider" /></span>
+          <span>¿Tiene intereses mensuales?</span>
+        </div>
+      </div>
+      {form.has_interest && <div className="form-group"><label>Tasa mensual (%)</label><input type="number" step="0.01" className="form-control" placeholder="Ej. 1.8" value={form.monthly_interest_rate} onChange={e => setForm({ ...form, monthly_interest_rate: e.target.value })} /></div>}
+
+      <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 16, marginTop: 4 }}>
+        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <CardIcon size={13} /> <strong>Tarjeta de crédito</strong> — Opcional
+        </div>
+        {cards.length > 0 ? (
+          <div className="form-group">
+            <label>Tarjeta</label>
+            <select className="form-control" value={form.card_id} onChange={e => setForm({ ...form, card_id: e.target.value, cutoff_day: '' })}>
+              <option value="">Sin tarjeta / manual</option>
+              {cards.map(c => <option key={c.id} value={c.id}>{c.name} (corte día {c.cutoff_day})</option>)}
+            </select>
+          </div>
+        ) : (
+          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '10px 14px', background: 'var(--surface-inset)', borderRadius: 'var(--radius-sm)', marginBottom: 12 }}>
+            <Info size={13} style={{ display: 'inline', marginRight: 5 }} />
+            No tienes tarjetas registradas. Agrégalas en el tab "Tarjetas".
+          </div>
+        )}
+        {!form.card_id && (
+          <div className="form-row">
+            <div className="form-group"><label>Día de corte (manual)</label><input type="number" min="1" max="31" className="form-control" placeholder="Ej. 25" value={form.cutoff_day} onChange={e => setForm({ ...form, cutoff_day: e.target.value })} /><div className="form-hint">Día en que cierra el ciclo</div></div>
+            <div className="form-group"><label>Día límite de pago</label><input type="number" min="1" max="31" className="form-control" placeholder="Auto: corte+15" value={form.cutoff_day ? String(parseInt(form.cutoff_day) + 15) : ''} disabled /><div className="form-hint">Corte + 15 días</div></div>
+          </div>
+        )}
+        {selectedCard && (
+          <div style={{ padding: '10px 14px', background: 'var(--blue-bg)', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', color: 'var(--blue)', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <CheckCircle2 size={14} />
+            Corte: día {selectedCard.cutoff_day} · Pago límite: día {selectedCard.cutoff_day + 15}
+          </div>
+        )}
+      </div>
+    </>
+  );
+};
+
 /* ═══════════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════ */
@@ -427,62 +488,7 @@ export default function Home() {
   const expenseCategoryTotals = fixedExpenses.reduce((acc, exp) => { acc[exp.category] = (acc[exp.category] || 0) + exp.amount; return acc; }, {} as Record<string, number>);
   const categoryColors: Record<string, string> = { Vivienda: 'var(--blue)', Servicios: 'var(--purple)', Alimentación: 'var(--orange)', Transporte: 'var(--green)', Suscripciones: 'var(--red)', Salud: '#ec4899', Educación: '#06b6d4', Otros: 'var(--text-muted)' };
 
-  /* ── Debt form card selector helper ─────────────────────── */
-  const DebtFormFields = ({ form, setForm }: { form: typeof blankDebt; setForm: (f: typeof blankDebt) => void }) => {
-    const selectedCard = cards.find(c => c.id === form.card_id);
-    return (
-      <>
-        <div className="form-group"><label>Nombre de la deuda</label><input type="text" className="form-control" placeholder="Ej. Tarjeta Visa — Computador" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} required /></div>
-        <div className="form-row">
-          <div className="form-group"><label>Monto financiado ($)</label><input type="number" className="form-control" placeholder="Ej. 1200000" value={form.total_capital} onChange={e => setForm({ ...form, total_capital: e.target.value })} required /></div>
-          <div className="form-group"><label>Cuotas totales</label><input type="number" className="form-control" placeholder="Ej. 12" value={form.total_installments} onChange={e => setForm({ ...form, total_installments: e.target.value })} required /></div>
-        </div>
-        <div className="form-row">
-          <div className="form-group"><label>Cuotas ya pagadas</label><input type="number" className="form-control" placeholder="0" value={form.installments_paid} onChange={e => setForm({ ...form, installments_paid: e.target.value })} required /></div>
-          <div className="form-group"><label>Fecha de compra</label><input type="date" className="form-control" value={form.start_date} onChange={e => setForm({ ...form, start_date: e.target.value })} required /></div>
-        </div>
-        <div className="form-group">
-          <div className="switch-group" onClick={() => setForm({ ...form, has_interest: !form.has_interest })}>
-            <span className="switch"><input type="checkbox" checked={form.has_interest} onChange={() => {}} /><span className="slider" /></span>
-            <span>¿Tiene intereses mensuales?</span>
-          </div>
-        </div>
-        {form.has_interest && <div className="form-group"><label>Tasa mensual (%)</label><input type="number" step="0.01" className="form-control" placeholder="Ej. 1.8" value={form.monthly_interest_rate} onChange={e => setForm({ ...form, monthly_interest_rate: e.target.value })} /></div>}
 
-        <div style={{ borderTop: '1px solid var(--divider)', paddingTop: 16, marginTop: 4 }}>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <CardIcon size={13} /> <strong>Tarjeta de crédito</strong> — Opcional
-          </div>
-          {cards.length > 0 ? (
-            <div className="form-group">
-              <label>Tarjeta</label>
-              <select className="form-control" value={form.card_id} onChange={e => setForm({ ...form, card_id: e.target.value, cutoff_day: '' })}>
-                <option value="">Sin tarjeta / manual</option>
-                {cards.map(c => <option key={c.id} value={c.id}>{c.name} (corte día {c.cutoff_day})</option>)}
-              </select>
-            </div>
-          ) : (
-            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', padding: '10px 14px', background: 'var(--surface-inset)', borderRadius: 'var(--radius-sm)', marginBottom: 12 }}>
-              <Info size={13} style={{ display: 'inline', marginRight: 5 }} />
-              No tienes tarjetas registradas. Agrégalas en el tab "Tarjetas".
-            </div>
-          )}
-          {!form.card_id && (
-            <div className="form-row">
-              <div className="form-group"><label>Día de corte (manual)</label><input type="number" min="1" max="31" className="form-control" placeholder="Ej. 25" value={form.cutoff_day} onChange={e => setForm({ ...form, cutoff_day: e.target.value })} /><div className="form-hint">Día en que cierra el ciclo</div></div>
-              <div className="form-group"><label>Día límite de pago</label><input type="number" min="1" max="31" className="form-control" placeholder="Auto: corte+15" value={form.cutoff_day ? String(parseInt(form.cutoff_day) + 15) : ''} disabled /><div className="form-hint">Corte + 15 días</div></div>
-            </div>
-          )}
-          {selectedCard && (
-            <div style={{ padding: '10px 14px', background: 'var(--blue-bg)', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', color: 'var(--blue)', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <CheckCircle2 size={14} />
-              Corte: día {selectedCard.cutoff_day} · Pago límite: día {selectedCard.cutoff_day + 15}
-            </div>
-          )}
-        </div>
-      </>
-    );
-  };
 
   /* ═══════════════════════════════════════════════════════════
      AUTH SCREEN
@@ -519,12 +525,22 @@ export default function Home() {
       <header className="main-header">
         <div className="logo"><Wallet size={18} /><span className="logo-text">Finanzas Pro</span></div>
         <div className="nav-links">
-          <button className={`nav-link ${currentTab === 'dashboard'   ? 'active' : ''}`} onClick={() => setCurrentTab('dashboard')}>Dashboard</button>
-          <button className={`nav-link ${currentTab === 'projections' ? 'active' : ''}`} onClick={() => setCurrentTab('projections')}>Proyecciones</button>
-          <button className={`nav-link ${currentTab === 'cards'       ? 'active' : ''}`} onClick={() => setCurrentTab('cards')}>Tarjetas</button>
+          <button className={`nav-link ${currentTab === 'dashboard'   ? 'active' : ''}`} onClick={() => setCurrentTab('dashboard')}>
+            <PieChart size={14} />
+            <span>Dashboard</span>
+          </button>
+          <button className={`nav-link ${currentTab === 'projections' ? 'active' : ''}`} onClick={() => setCurrentTab('projections')}>
+            <TrendingUp size={14} />
+            <span>Proyecciones</span>
+          </button>
+          <button className={`nav-link ${currentTab === 'cards'       ? 'active' : ''}`} onClick={() => setCurrentTab('cards')}>
+            <CreditCard size={14} />
+            <span>Tarjetas</span>
+          </button>
           <button className={`nav-link ${currentTab === 'family'      ? 'active' : ''}`} onClick={() => setCurrentTab('family')}>
+            <Users size={14} />
             <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <Users size={13} />Familia
+              Familia
               {family && <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', display: 'inline-block' }} />}
             </span>
           </button>
@@ -1138,7 +1154,7 @@ export default function Home() {
         <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowDebtModal(false); }}>
           <div className="modal-content">
             <div className="modal-header"><div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><CreditCard size={18} /> Agregar deuda</div><button className="btn btn-ghost btn-icon" onClick={() => setShowDebtModal(false)}><X size={16} /></button></div>
-            <form onSubmit={addDebt}><DebtFormFields form={debtForm} setForm={setDebtForm} /><div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={() => setShowDebtModal(false)}>Cancelar</button><button type="submit" className="btn btn-primary">Agregar deuda</button></div></form>
+            <form onSubmit={addDebt}><DebtFormFields form={debtForm} setForm={setDebtForm} cards={cards} /><div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={() => setShowDebtModal(false)}>Cancelar</button><button type="submit" className="btn btn-primary">Agregar deuda</button></div></form>
           </div>
         </div>
       )}
@@ -1148,7 +1164,7 @@ export default function Home() {
         <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setEditingDebt(null); }}>
           <div className="modal-content">
             <div className="modal-header"><div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Edit2 size={17} /> {editingDebt.name}</div><button className="btn btn-ghost btn-icon" onClick={() => setEditingDebt(null)}><X size={16} /></button></div>
-            <form onSubmit={saveEditDebt}><DebtFormFields form={editDebtForm} setForm={setEditDebtForm} /><div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={() => setEditingDebt(null)}>Cancelar</button><button type="submit" className="btn btn-primary">Guardar cambios</button></div></form>
+            <form onSubmit={saveEditDebt}><DebtFormFields form={editDebtForm} setForm={setEditDebtForm} cards={cards} /><div className="modal-footer"><button type="button" className="btn btn-secondary" onClick={() => setEditingDebt(null)}>Cancelar</button><button type="submit" className="btn btn-primary">Guardar cambios</button></div></form>
           </div>
         </div>
       )}

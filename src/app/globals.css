@@ -197,6 +197,9 @@ body {
   transition: var(--transition);
   font-family: var(--font);
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .nav-link:hover { color: var(--text-primary); background: var(--surface); }
@@ -1298,10 +1301,24 @@ input:checked + .slider::before { transform: translateX(20px); background: #fff;
 
   .nav-link {
     flex: 1;
-    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
     padding: 6px 4px;
-    font-size: 0.72rem;
+    font-size: 0.68rem;
     border-radius: 8px;
+    text-align: center;
+  }
+  .nav-link svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  /* Prevent iOS / mobile zoom on input focus */
+  .form-control, select, option, textarea {
+    font-size: 16px !important;
   }
 
   /* Add bottom padding to content so it clears the tab bar */
@@ -1367,8 +1384,8 @@ input:checked + .slider::before { transform: translateX(20px); background: #fff;
     max-width: 100%;
     border-radius: var(--radius-xl) var(--radius-xl) 0 0;
     max-height: 92vh;
-    padding: 24px 20px;
-    padding-bottom: max(24px, env(safe-area-inset-bottom));
+    padding: 20px 16px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
   }
   .modal-content.modal-wide {
     max-width: 100%;
