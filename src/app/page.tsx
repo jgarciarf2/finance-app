@@ -462,12 +462,23 @@ export default function Home() {
         if (debt.cutoff_day) { if (start.getDate() > debt.cutoff_day) offset++; if (i === 0 && todayDay > debt.cutoff_day) offset++; }
         const adjStart   = new Date(start.getFullYear(), start.getMonth() + offset, 1);
         const diffMonths = (simDate.getFullYear() - adjStart.getFullYear()) * 12 + simDate.getMonth() - adjStart.getMonth();
-        if (diffMonths < 0 || diffMonths >= debt.total_installments) return { name: debt.name, quota: 0, payment_day: debt.payment_day };
+        if (diffMonths < 0 || diffMonths >= debt.total_installments) {
+          return { name: debt.name, quota: 0, payment_day: debt.payment_day, totalCapital: 0, paidCapital: 0, remainingBalance: 0, currentInstallment: 0, totalInstallments: 0 };
+        }
         const remainBefore = debt.total_capital - diffMonths * debt.fixed_capital_payment;
         const interest     = debt.has_interest ? remainBefore * (debt.monthly_interest_rate / 100) : 0;
         const quota        = debt.fixed_capital_payment + interest;
         simDebtsQuota += quota;
-        return { name: debt.name, quota, payment_day: debt.payment_day };
+        return {
+          name: debt.name,
+          quota,
+          payment_day: debt.payment_day,
+          totalCapital: debt.total_capital,
+          paidCapital: (diffMonths + 1) * debt.fixed_capital_payment,
+          remainingBalance: Math.max(0, debt.total_capital - (diffMonths + 1) * debt.fixed_capital_payment),
+          currentInstallment: diffMonths + 1,
+          totalInstallments: debt.total_installments
+        };
       });
       const cashFlow = totalIncomes - totalFixedExpenses - simDebtsQuota;
       return { date: simDate, label: monthLong(simDate), short: monthShort(simDate), incomes: totalIncomes, fixedExpenses: totalFixedExpenses, debtsQuota: simDebtsQuota, cashFlow, debtItems: simDebts.filter(d => d.quota > 0), isDebtFree: simDebtsQuota === 0 };
@@ -899,7 +910,16 @@ export default function Home() {
                         ))}
                         {proj.debtItems.map((debt, idx) => (
                           <tr key={`debt-${idx}`}>
-                            <td>{debt.name}</td>
+                            <td>
+                              <div style={{ fontWeight: 600 }}>{debt.name} <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>({debt.currentInstallment}/{debt.totalInstallments})</span></div>
+                              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 4, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                                <span><strong>Total:</strong> {fmt(debt.totalCapital)}</span>
+                                <span style={{ color: 'var(--border-focus)' }}>•</span>
+                                <span><strong>Abonado:</strong> {fmt(debt.paidCapital)}</span>
+                                <span style={{ color: 'var(--border-focus)' }}>•</span>
+                                <span><strong>Restante:</strong> {fmt(debt.remainingBalance)}</span>
+                              </div>
+                            </td>
                             <td><span className="badge-orange-subtle">Cuota deuda</span></td>
                             <td className="text-right text-orange">-{fmt(debt.quota)}</td>
                           </tr>
