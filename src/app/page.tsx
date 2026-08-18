@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { db, Income, FixedExpense, Debt, Card, Family, FamilyMember, MemberSummary } from '@/lib/db';
+import { db, Income, FixedExpense, Debt, Card, Family, FamilyMember, MemberSummary, SavingsGoal } from '@/lib/db';
 import {
   Wallet, Receipt, CreditCard, Landmark, TrendingUp, TrendingDown,
   Trash2, Plus, LogOut, RefreshCw, Sun, Moon, CheckCircle2, Eye,
@@ -176,7 +176,7 @@ const DebtFormFields = ({ form, setForm, cards }: {
 /* ═══════════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════ */
-type Tab = 'dashboard' | 'projections' | 'cards' | 'family';
+type Tab = 'dashboard' | 'projections' | 'savings' | 'cards' | 'family';
 
 export default function Home() {
   /* auth */
@@ -201,6 +201,7 @@ export default function Home() {
   const [fixedExpenses, setFixedExpenses] = useState<FixedExpense[]>([]);
   const [debts, setDebts]                 = useState<Debt[]>([]);
   const [cards, setCards]                 = useState<Card[]>([]);
+  const [savingsGoals, setSavingsGoals]   = useState<SavingsGoal[]>([]);
 
   /* family */
   const [family, setFamily]               = useState<Family | null>(null);
@@ -218,14 +219,21 @@ export default function Home() {
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   const [showDebtModal,    setShowDebtModal]    = useState(false);
   const [showCardModal,    setShowCardModal]    = useState(false);
+  const [showSavingsModal, setShowSavingsModal] = useState(false);
+  const [showAddFundsModal, setShowAddFundsModal] = useState<SavingsGoal | null>(null);
   const [amortDebt,    setAmortDebt]   = useState<Debt | null>(null);
   const [editingDebt,  setEditingDebt] = useState<Debt | null>(null);
   const [editingCard,  setEditingCard] = useState<Card | null>(null);
+  const [editingGoal,  setEditingGoal] = useState<SavingsGoal | null>(null);
 
   /* forms */
   const [incomeForm,  setIncomeForm]  = useState({ name: '', amount: '', month: new Date().getMonth() + 1, year: new Date().getFullYear() });
   const [expenseForm, setExpenseForm] = useState({ name: '', amount: '', category: 'Vivienda' });
   const [cardForm,    setCardForm]    = useState({ name: '', cutoff_day: '' });
+  
+  const blankSavings = { name: '', target_amount: '', current_amount: '0', deadline: '', category: 'Fondo' };
+  const [savingsForm, setSavingsForm] = useState(blankSavings);
+  const [addFundsAmount, setAddFundsAmount] = useState('');
 
   const blankDebt = { name: '', total_capital: '', monthly_interest_rate: '0', total_installments: '12', installments_paid: '0', has_interest: false, start_date: new Date().toISOString().split('T')[0], card_id: '', cutoff_day: '' };
   const [debtForm,     setDebtForm]     = useState(blankDebt);
@@ -249,8 +257,14 @@ export default function Home() {
   const fetchAll = async (sId: string, userId?: string) => {
     setLoading(true);
     try {
-      const [inc, exp, dbt, crd] = await Promise.all([db.incomes.list(sId), db.fixedExpenses.list(sId), db.debts.list(sId), db.cards.list(sId)]);
-      setIncomes(inc); setFixedExpenses(exp); setDebts(dbt); setCards(crd);
+      const [inc, exp, dbt, crd, svg] = await Promise.all([
+        db.incomes.list(sId),
+        db.fixedExpenses.list(sId),
+        db.debts.list(sId),
+        db.cards.list(sId),
+        db.savingsGoals.list(sId)
+      ]);
+      setIncomes(inc); setFixedExpenses(exp); setDebts(dbt); setCards(crd); setSavingsGoals(svg);
       if (userId) fetchFamily(userId);
     } finally { setLoading(false); }
   };
@@ -364,6 +378,47 @@ export default function Home() {
   const deleteDebt    = async (id: string) => { if (confirm('¿Eliminar esta deuda?')) { await db.debts.delete(id); fetchAll(spaceId, user?.id); } };
   const deleteCard    = async (id: string) => { if (confirm('¿Eliminar esta tarjeta?')) { await db.cards.delete(id); fetchAll(spaceId, user?.id); } };
 
+  /* savings goals actions */
+  const addSavingsGoal = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const target = parseFloat(savingsForm.target_amount);
+    const current = parseFloat(savingsForm.current_amount || '0');
+    if (editingGoal) {
+      await db.savingsGoals.update(editingGoal.id, { name: savingsForm.name, target_amount: target, current_amount: current, deadline: savingsForm.deadline || undefined, category: savingsForm.category });
+      setEditingGoal(null);
+    } else {
+      await db.savingsGoals.create({ space_id: spaceId, name: savingsForm.name, target_amount: target, current_amount: current, deadline: savingsForm.deadline || undefined, category: savingsForm.category });
+    }
+    setShowSavingsModal(false); setSavingsForm(blankSavings); fetchAll(spaceId, user?.id);
+  };
+
+  const deleteSavingsGoal = async (id: string) => {
+    if (confirm('¿Eliminar esta meta de ahorro?')) {
+      await db.savingsGoals.delete(id);
+      fetchAll(spaceId, user?.id);
+    }
+  };
+
+  const addSavingsFunds = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!showAddFundsModal) return;
+    const amount = parseFloat(addFundsAmount);
+    if (isNaN(amount) || amount <= 0) return;
+    await db.savingsGoals.addFunds(showAddFundsModal.id, amount);
+    setShowAddFundsModal(null); setAddFundsAmount(''); fetchAll(spaceId, user?.id);
+  };
+
+  const openEditGoal = (goal: SavingsGoal) => {
+    setSavingsForm({
+      name: goal.name,
+      target_amount: String(goal.target_amount),
+      current_amount: String(goal.current_amount),
+      deadline: goal.deadline || '',
+      category: goal.category || 'Fondo'
+    });
+    setEditingGoal(goal); setShowSavingsModal(true);
+  };
+
   const copyCode = (code: string) => { navigator.clipboard.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); };
 
   /* ── Family actions ─────────────────────────────────────── */
@@ -394,6 +449,8 @@ export default function Home() {
   /* ── Financials ─────────────────────────────────────────── */
   const totalIncomes       = incomes.reduce((a, c) => a + c.amount, 0);
   const totalFixedExpenses = fixedExpenses.reduce((a, c) => a + c.amount, 0);
+  const totalSaved         = savingsGoals.reduce((a, g) => a + (g.current_amount || 0), 0);
+  const totalSavedTarget   = savingsGoals.reduce((a, g) => a + (g.target_amount || 0), 0);
 
   const activeDebtsDetails = debts.map(debt => {
     const done = debt.installments_paid >= debt.total_installments;
@@ -544,6 +601,10 @@ export default function Home() {
             <TrendingUp size={14} />
             <span>Proyecciones</span>
           </button>
+          <button className={`nav-link ${currentTab === 'savings'     ? 'active' : ''}`} onClick={() => setCurrentTab('savings')}>
+            <Target size={14} />
+            <span>Metas</span>
+          </button>
           <button className={`nav-link ${currentTab === 'cards'       ? 'active' : ''}`} onClick={() => setCurrentTab('cards')}>
             <CreditCard size={14} />
             <span>Tarjetas</span>
@@ -572,11 +633,12 @@ export default function Home() {
         {currentTab === 'dashboard' && (
           <>
             {/* Stat Cards */}
-            <div className="summary-grid">
+             <div className="summary-grid">
               {[
                 { icon: <Wallet size={13} />,    label: 'Ingresos del mes',     value: totalIncomes,       cls: 'green' },
                 { icon: <Receipt size={13} />,   label: 'Egresos fijos',        value: totalFixedExpenses, cls: 'red' },
                 { icon: <CreditCard size={13} />,label: 'Cuotas del mes',       value: totalDebtQuota,     cls: 'orange' },
+                { icon: <Target size={13} />,    label: 'Ahorrado total',       value: totalSaved,         cls: 'blue' },
                 { icon: <Landmark size={13} />,  label: 'Deuda total restante', value: totalRemainingDebt, cls: 'red' },
               ].map((s, i) => (
                 <div key={i} className="stat-card">
@@ -586,7 +648,8 @@ export default function Home() {
                     {i === 0 && `${incomes.length} fuente${incomes.length !== 1 ? 's' : ''}`}
                     {i === 1 && `${fixedExpenses.length} concepto${fixedExpenses.length !== 1 ? 's' : ''}`}
                     {i === 2 && `${activeDebtsDetails.filter(d => !d.isCompleted).length} activa${activeDebtsDetails.filter(d => !d.isCompleted).length !== 1 ? 's' : ''}`}
-                    {i === 3 && `${debts.length} obligación${debts.length !== 1 ? 'es' : ''}`}
+                    {i === 3 && `${savingsGoals.length} meta${savingsGoals.length !== 1 ? 's' : ''}`}
+                    {i === 4 && `${debts.length} obligación${debts.length !== 1 ? 'es' : ''}`}
                   </div>
                 </div>
               ))}
@@ -1162,6 +1225,109 @@ export default function Home() {
             )}
           </div>
         )}
+
+        {/* ══════════════════════════════
+            TAB: SAVINGS (METAS)
+            ══════════════════════════════ */}
+        {currentTab === 'savings' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            <div className="section-header">
+              <div>
+                <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}><Target size={18} /> Metas de Ahorro</div>
+                <div className="section-subtitle">Define tus objetivos y haz seguimiento a tus ahorros</div>
+              </div>
+              <button className="btn btn-primary" onClick={() => { setEditingGoal(null); setSavingsForm(blankSavings); setShowSavingsModal(true); }}><Plus size={15} /> Nueva meta</button>
+            </div>
+
+            {/* General progress banner */}
+            {savingsGoals.length > 0 && (
+              <div className="card" style={{ display: 'flex', gap: 24, alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ flex: 1, minWidth: 200, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Ahorro general de tus metas</div>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                    <span style={{ fontSize: '1.8rem', fontWeight: 800, color: 'var(--text-primary)' }}>{fmt(totalSaved)}</span>
+                    <span style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>de {fmt(totalSavedTarget)}</span>
+                  </div>
+                  <div className="progress-bar" style={{ height: 8 }}>
+                    <div className="progress-fill" style={{ width: `${Math.min(100, (totalSaved / (totalSavedTarget || 1)) * 100)}%`, background: 'var(--green)' }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                    <span>Progreso total</span>
+                    <span>{Math.round((totalSaved / (totalSavedTarget || 1)) * 100)}%</span>
+                  </div>
+                </div>
+                <DonutChart
+                  segments={[
+                    { label: 'Ahorrado', value: totalSaved, color: 'var(--green)' },
+                    { label: 'Pendiente', value: Math.max(0, totalSavedTarget - totalSaved), color: 'var(--border-strong)' }
+                  ]}
+                  size={100}
+                  thickness={14}
+                />
+              </div>
+            )}
+
+            {savingsGoals.length === 0 ? (
+              <div className="empty-state" style={{ padding: '64px 20px' }}>
+                <Target size={48} style={{ opacity: 0.3, marginBottom: 12 }} />
+                <div className="empty-state-text">No tienes metas de ahorro registradas</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: 20 }}>Empieza creando tu primer objetivo financiero.</div>
+                <button className="btn btn-primary btn-sm" onClick={() => { setEditingGoal(null); setSavingsForm(blankSavings); setShowSavingsModal(true); }}><Plus size={14} /> Crear meta</button>
+              </div>
+            ) : (
+              <div className="goals-grid">
+                {savingsGoals.map(goal => {
+                  const pct = Math.min(100, Math.round((goal.current_amount / (goal.target_amount || 1)) * 100));
+                  const isCompleted = goal.current_amount >= goal.target_amount;
+                  return (
+                    <div key={goal.id} className="goal-card">
+                      <div className="goal-card-header">
+                        <div className="goal-card-info">
+                          <span className="goal-card-title">{goal.name}</span>
+                          <span className="goal-card-category">
+                            <Sparkles size={11} /> {goal.category || 'Ahorro'}
+                          </span>
+                        </div>
+                        <div className="goal-actions">
+                          <button className="btn btn-ghost btn-icon btn-sm" onClick={() => openEditGoal(goal)} title="Editar"><Edit2 size={13} /></button>
+                          <button className="btn btn-ghost btn-icon btn-sm" style={{ color: 'var(--red)' }} onClick={() => deleteSavingsGoal(goal.id)} title="Eliminar"><Trash2 size={13} /></button>
+                        </div>
+                      </div>
+
+                      <div className="goal-progress-section">
+                        <div className="goal-amounts">
+                          <div>
+                            <span className="goal-amount-saved">{fmt(goal.current_amount)}</span>
+                            <span className="goal-amount-target"> / {fmt(goal.target_amount)}</span>
+                          </div>
+                          <span className={`goal-pct-badge ${isCompleted ? 'badge-green' : 'badge-blue'}`}>{pct}%</span>
+                        </div>
+                        <div className="progress-bar" style={{ height: 6 }}>
+                          <div className="progress-fill" style={{ width: `${pct}%`, background: isCompleted ? 'var(--green)' : 'var(--blue)' }} />
+                        </div>
+                      </div>
+
+                      {goal.deadline && (
+                        <div className="goal-deadline">
+                          <Calendar size={12} />
+                          <span>Fecha límite: {dateLabel(new Date(goal.deadline + 'T00:00:00'))}</span>
+                        </div>
+                      )}
+
+                      <div className="goal-quick-funds">
+                        <span className="goal-quick-label">Ahorrar rápido:</span>
+                        <button className="goal-quick-btn" onClick={() => { db.savingsGoals.addFunds(goal.id, 50000); fetchAll(spaceId, user?.id); }}>+$50k</button>
+                        <button className="goal-quick-btn" onClick={() => { db.savingsGoals.addFunds(goal.id, 100000); fetchAll(spaceId, user?.id); }}>+$100k</button>
+                        <button className="goal-quick-btn" onClick={() => { db.savingsGoals.addFunds(goal.id, 500000); fetchAll(spaceId, user?.id); }}>+$500k</button>
+                        <button className="goal-quick-btn" style={{ background: 'var(--blue-bg)', color: 'var(--blue)' }} onClick={() => setShowAddFundsModal(goal)}>Otro</button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </main>
 
       {/* ════════════════════════════════════
@@ -1264,6 +1430,80 @@ export default function Home() {
               </table>
             </div>
             <div className="modal-footer"><button className="btn btn-primary" onClick={() => setAmortDebt(null)}>Cerrar</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* Savings Goal Modal */}
+      {showSavingsModal && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) { setShowSavingsModal(false); setEditingGoal(null); } }}>
+          <div className="modal-content">
+            <div className="modal-header">
+              <div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Target size={18} />
+                {editingGoal ? 'Editar meta de ahorro' : 'Nueva meta de ahorro'}
+              </div>
+              <button className="btn btn-ghost btn-icon" onClick={() => { setShowSavingsModal(false); setEditingGoal(null); }}><X size={16} /></button>
+            </div>
+            <form onSubmit={addSavingsGoal}>
+              <div className="form-group">
+                <label>Nombre de la meta</label>
+                <input type="text" className="form-control" placeholder="Ej. Fondo de Emergencia, Vacaciones 2027" value={savingsForm.name} onChange={e => setSavingsForm({ ...savingsForm, name: e.target.value })} required />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Monto objetivo ($)</label>
+                  <input type="number" className="form-control" placeholder="Ej. 5000000" value={savingsForm.target_amount} onChange={e => setSavingsForm({ ...savingsForm, target_amount: e.target.value })} required />
+                </div>
+                <div className="form-group">
+                  <label>Monto ahorrado inicial ($)</label>
+                  <input type="number" className="form-control" placeholder="Ej. 100000" value={savingsForm.current_amount} onChange={e => setSavingsForm({ ...savingsForm, current_amount: e.target.value })} required />
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Fecha límite (opcional)</label>
+                  <input type="date" className="form-control" value={savingsForm.deadline} onChange={e => setSavingsForm({ ...savingsForm, deadline: e.target.value })} />
+                </div>
+                <div className="form-group">
+                  <label>Categoría</label>
+                  <select className="form-control" value={savingsForm.category} onChange={e => setSavingsForm({ ...savingsForm, category: e.target.value })}>
+                    {['Fondo', 'Viajes', 'Tecnología', 'Vehículo', 'Estudio', 'Hogar', 'Salud', 'Otro'].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowSavingsModal(false); setEditingGoal(null); }}>Cancelar</button>
+                <button type="submit" className="btn btn-primary">{editingGoal ? 'Guardar cambios' : 'Crear meta'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add Funds Modal */}
+      {showAddFundsModal && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowAddFundsModal(null); }}>
+          <div className="modal-content">
+            <div className="modal-header">
+              <div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Plus size={18} />
+                Ahorrar en: {showAddFundsModal.name}
+              </div>
+              <button className="btn btn-ghost btn-icon" onClick={() => setShowAddFundsModal(null)}><X size={16} /></button>
+            </div>
+            <form onSubmit={addSavingsFunds}>
+              <div className="form-group">
+                <label>Monto a ahorrar ($)</label>
+                <input type="number" className="form-control" placeholder="Ej. 150000" value={addFundsAmount} onChange={e => setAddFundsAmount(e.target.value)} required autoFocus />
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn btn-secondary" onClick={() => setShowAddFundsModal(null)}>Cancelar</button>
+                <button type="submit" className="btn btn-primary">Ahorrar</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

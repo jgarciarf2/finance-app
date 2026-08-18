@@ -84,6 +84,16 @@ export interface MemberSummary {
   freeCashFlow: number;
 }
 
+export interface SavingsGoal {
+  id: string;
+  space_id: string;
+  name: string;
+  target_amount: number;
+  current_amount: number;
+  deadline?: string;
+  category?: string;
+}
+
 // Generate UUID for mock
 const generateUUID = () => {
   return typeof crypto !== 'undefined' && crypto.randomUUID
@@ -551,5 +561,94 @@ export const db = {
 
       return { totalIncome, totalExpenses, totalDebtQuota };
     },
+  },
+
+  // ── Savings Goals ───────────────────────────────────────
+  savingsGoals: {
+    async list(spaceId: string): Promise<SavingsGoal[]> {
+      if (useSupabase && supabase) {
+        const { data, error } = await supabase
+          .from('savings_goals')
+          .select('*')
+          .eq('space_id', spaceId)
+          .order('name');
+        if (error) throw error;
+        return data || [];
+      } else {
+        return getLocalData('mock_savings_goals').filter((g: SavingsGoal) => g.space_id === spaceId);
+      }
+    },
+
+    async create(goal: Omit<SavingsGoal, 'id'>): Promise<SavingsGoal> {
+      const newGoal = { ...goal, id: generateUUID() };
+      if (useSupabase && supabase) {
+        const { data, error } = await supabase
+          .from('savings_goals')
+          .insert([newGoal])
+          .select()
+          .single();
+        if (error) throw error;
+        return data;
+      } else {
+        const goals = getLocalData('mock_savings_goals');
+        goals.push(newGoal);
+        setLocalData('mock_savings_goals', goals);
+        return newGoal;
+      }
+    },
+
+    async update(id: string, data: Partial<Omit<SavingsGoal, 'id' | 'space_id'>>): Promise<void> {
+      if (useSupabase && supabase) {
+        const { error } = await supabase
+          .from('savings_goals')
+          .update(data)
+          .eq('id', id);
+        if (error) throw error;
+      } else {
+        const goals = getLocalData('mock_savings_goals');
+        const idx = goals.findIndex((g: SavingsGoal) => g.id === id);
+        if (idx !== -1) {
+          goals[idx] = { ...goals[idx], ...data };
+          setLocalData('mock_savings_goals', goals);
+        }
+      }
+    },
+
+    async delete(id: string): Promise<void> {
+      if (useSupabase && supabase) {
+        const { error } = await supabase
+          .from('savings_goals')
+          .delete()
+          .eq('id', id);
+        if (error) throw error;
+      } else {
+        const goals = getLocalData('mock_savings_goals');
+        setLocalData('mock_savings_goals', goals.filter((g: SavingsGoal) => g.id !== id));
+      }
+    },
+
+    async addFunds(id: string, amount: number): Promise<void> {
+      if (useSupabase && supabase) {
+        const { data: current } = await supabase
+          .from('savings_goals')
+          .select('current_amount')
+          .eq('id', id)
+          .single();
+        const nextAmount = (current?.current_amount || 0) + amount;
+        const { error } = await supabase
+          .from('savings_goals')
+          .update({ current_amount: nextAmount })
+          .eq('id', id);
+        if (error) throw error;
+      } else {
+        const goals = getLocalData('mock_savings_goals');
+        const idx = goals.findIndex((g: SavingsGoal) => g.id === id);
+        if (idx !== -1) {
+          goals[idx].current_amount = (goals[idx].current_amount || 0) + amount;
+          setLocalData('mock_savings_goals', goals);
+        }
+      }
+    }
   }
 };
+

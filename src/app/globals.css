@@ -4,40 +4,40 @@
 
 /* ---- LIGHT THEME (default) ---- */
 :root {
-  --bg:              #f5f5f7;
-  --bg-secondary:    #fbfbfd;
+  --bg:              #fafaf9;
+  --bg-secondary:    #f5f5f4;
   --surface:         #ffffff;
   --surface-raised:  #ffffff;
-  --surface-inset:   #f5f5f7;
+  --surface-inset:   #f5f5f4;
 
-  --border:          rgba(0, 0, 0, 0.09);
-  --border-strong:   rgba(0, 0, 0, 0.16);
-  --divider:         rgba(0, 0, 0, 0.06);
+  --border:          rgba(0, 0, 0, 0.05);
+  --border-strong:   rgba(0, 0, 0, 0.1);
+  --divider:         rgba(0, 0, 0, 0.04);
 
-  --text-primary:    #1d1d1f;
-  --text-secondary:  #6e6e73;
-  --text-muted:      #aeaeb2;
+  --text-primary:    #1c1917;
+  --text-secondary:  #78716c;
+  --text-muted:      #a8a29e;
   --text-inverse:    #ffffff;
 
-  --accent:          #1d1d1f;
-  --accent-hover:    #3a3a3c;
+  --accent:          #1c1917;
+  --accent-hover:    #44403c;
 
   /* iOS System Colors — only for data, never for UI chrome */
-  --green:           #28a745;
-  --green-bg:        rgba(40, 167, 69, 0.08);
-  --red:             #dc3545;
-  --red-bg:          rgba(220, 53, 69, 0.08);
-  --orange:          #e67e00;
-  --orange-bg:       rgba(230, 126, 0, 0.08);
-  --blue:            #0071e3;
-  --blue-bg:         rgba(0, 113, 227, 0.08);
-  --purple:          #5856d6;
-  --purple-bg:       rgba(88, 86, 214, 0.08);
+  --green:           #10b981;
+  --green-bg:        rgba(16, 185, 129, 0.05);
+  --red:             #f43f5e;
+  --red-bg:          rgba(244, 63, 94, 0.05);
+  --orange:          #f97316;
+  --orange-bg:       rgba(249, 115, 22, 0.05);
+  --blue:            #0284c7;
+  --blue-bg:         rgba(2, 132, 199, 0.05);
+  --purple:          #8b5cf6;
+  --purple-bg:       rgba(139, 92, 246, 0.05);
 
-  --shadow-xs:       0 1px 2px rgba(0,0,0,0.05);
-  --shadow-sm:       0 1px 4px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.04);
-  --shadow-md:       0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.04);
-  --shadow-lg:       0 12px 40px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.05);
+  --shadow-xs:       0 1px 2px rgba(0,0,0,0.03);
+  --shadow-sm:       0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+  --shadow-md:       0 4px 6px -1px rgba(0,0,0,0.04), 0 2px 4px -1px rgba(0,0,0,0.02);
+  --shadow-lg:       0 10px 15px -3px rgba(0,0,0,0.04), 0 4px 6px -2px rgba(0,0,0,0.02);
 
   --font:            -apple-system, BlinkMacSystemFont, "SF Pro Display", "Geist", "Segoe UI", sans-serif;
   --font-mono:       "SF Mono", "Geist Mono", ui-monospace, monospace;
@@ -45,75 +45,75 @@
   --radius-xs:       6px;
   --radius-sm:       10px;
   --radius-md:       14px;
-  --radius-lg:       20px;
-  --radius-xl:       28px;
+  --radius-lg:       18px;
+  --radius-xl:       24px;
 
-  --transition:      all 0.18s ease;
+  --transition:      all 0.15s ease;
 
   /* Theme-aware scrollbar */
-  --scrollbar-thumb: rgba(0,0,0,0.15);
-  --scrollbar-thumb-hover: rgba(0,0,0,0.28);
+  --scrollbar-thumb: rgba(0,0,0,0.1);
+  --scrollbar-thumb-hover: rgba(0,0,0,0.18);
 
   /* Modal */
   --modal-bg:        #ffffff;
-  --modal-overlay:   rgba(0,0,0,0.45);
+  --modal-overlay:   rgba(0,0,0,0.3);
 
   /* Input */
   --input-bg:        #ffffff;
-  --input-border:    rgba(0,0,0,0.14);
-  --input-focus-shadow: 0 0 0 3px rgba(0,113,227,0.18);
+  --input-border:    rgba(0,0,0,0.08);
+  --input-focus-shadow: 0 0 0 3px rgba(28,25,23,0.08);
 
   /* Header */
-  --header-bg:       rgba(255,255,255,0.88);
+  --header-bg:       rgba(250,250,249,0.85);
 }
 
 /* ---- DARK THEME ---- */
 [data-theme="dark"] {
-  --bg:              #000000;
-  --bg-secondary:    #0a0a0a;
-  --surface:         #1c1c1e;
-  --surface-raised:  #2c2c2e;
-  --surface-inset:   #111111;
+  --bg:              #0c0a09;
+  --bg-secondary:    #1c1917;
+  --surface:         #1c1917;
+  --surface-raised:  #292524;
+  --surface-inset:   #171514;
 
-  --border:          rgba(255,255,255,0.09);
-  --border-strong:   rgba(255,255,255,0.16);
-  --divider:         rgba(255,255,255,0.06);
+  --border:          rgba(255,255,255,0.06);
+  --border-strong:   rgba(255,255,255,0.12);
+  --divider:         rgba(255,255,255,0.05);
 
-  --text-primary:    #f5f5f7;
-  --text-secondary:  #8e8e93;
-  --text-muted:      #48484a;
-  --text-inverse:    #000000;
+  --text-primary:    #f5f5f4;
+  --text-secondary:  #a8a29e;
+  --text-muted:      #57534e;
+  --text-inverse:    #0c0a09;
 
-  --accent:          #f5f5f7;
-  --accent-hover:    #d5d5d7;
+  --accent:          #f5f5f4;
+  --accent-hover:    #e7e5e4;
 
-  --green:           #30d158;
-  --green-bg:        rgba(48,209,88,0.1);
-  --red:             #ff453a;
-  --red-bg:          rgba(255,69,58,0.1);
-  --orange:          #ff9f0a;
-  --orange-bg:       rgba(255,159,10,0.1);
-  --blue:            #0a84ff;
-  --blue-bg:         rgba(10,132,255,0.1);
-  --purple:          #5e5ce6;
-  --purple-bg:       rgba(94,92,230,0.1);
+  --green:           #34d399;
+  --green-bg:        rgba(52, 211, 153, 0.08);
+  --red:             #fb7185;
+  --red-bg:          rgba(251, 113, 133, 0.08);
+  --orange:          #fb923c;
+  --orange-bg:       rgba(251, 146, 60, 0.08);
+  --blue:            #38bdf8;
+  --blue-bg:         rgba(56, 189, 248, 0.08);
+  --purple:          #a78bfa;
+  --purple-bg:       rgba(167, 139, 250, 0.08);
 
-  --shadow-xs:       0 1px 2px rgba(0,0,0,0.4);
-  --shadow-sm:       0 1px 4px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04);
-  --shadow-md:       0 4px 16px rgba(0,0,0,0.5), 0 1px 4px rgba(0,0,0,0.3);
-  --shadow-lg:       0 12px 40px rgba(0,0,0,0.7), 0 2px 8px rgba(0,0,0,0.4);
+  --shadow-xs:       0 1px 2px rgba(0,0,0,0.2);
+  --shadow-sm:       0 1px 3px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.02);
+  --shadow-md:       0 4px 6px -1px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+  --shadow-lg:       0 10px 15px -3px rgba(0,0,0,0.4), 0 4px 6px -2px rgba(0,0,0,0.3);
 
-  --scrollbar-thumb: rgba(255,255,255,0.15);
-  --scrollbar-thumb-hover: rgba(255,255,255,0.28);
+  --scrollbar-thumb: rgba(255,255,255,0.08);
+  --scrollbar-thumb-hover: rgba(255,255,255,0.15);
 
-  --modal-bg:        #1c1c1e;
-  --modal-overlay:   rgba(0,0,0,0.7);
+  --modal-bg:        #1c1917;
+  --modal-overlay:   rgba(0,0,0,0.6);
 
-  --input-bg:        #2c2c2e;
-  --input-border:    rgba(255,255,255,0.12);
-  --input-focus-shadow: 0 0 0 3px rgba(10,132,255,0.25);
+  --input-bg:        #171514;
+  --input-border:    rgba(255,255,255,0.08);
+  --input-focus-shadow: 0 0 0 3px rgba(245,245,244,0.08);
 
-  --header-bg:       rgba(0,0,0,0.85);
+  --header-bg:       rgba(12,10,9,0.85);
 }
 
 /* Smooth theme transition */
@@ -1603,4 +1603,160 @@ input:checked + .slider::before { transform: translateX(20px); background: #fff;
 .text-green { color: var(--green) !important; }
 .text-red { color: var(--red) !important; }
 .text-orange { color: var(--orange) !important; }
+
+/* =============================================
+   SAVINGS GOALS (METAS)
+   ============================================= */
+.goals-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  margin-top: 16px;
+}
+
+@media (min-width: 640px) {
+  .goals-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 20px;
+  }
+}
+
+.goal-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  position: relative;
+  transition: var(--transition);
+}
+
+.goal-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-strong);
+}
+
+.goal-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.goal-card-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.goal-card-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+.goal-card-category {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.goal-progress-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.goal-amounts {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  font-size: 0.8rem;
+}
+
+.goal-amount-saved {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.goal-amount-target {
+  color: var(--text-secondary);
+}
+
+.goal-pct-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.goal-deadline {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.goal-quick-funds {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border-top: 1px solid var(--divider);
+  padding-top: 12px;
+  margin-top: 4px;
+}
+
+.goal-quick-label {
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-right: auto;
+}
+
+.goal-quick-btn {
+  background: var(--surface-inset);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: var(--font);
+}
+
+.goal-quick-btn:hover {
+  background: var(--surface);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+
+.goal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.goal-summary-widget {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.goal-summary-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.82rem;
+}
+
 
