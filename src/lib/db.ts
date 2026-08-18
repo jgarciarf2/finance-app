@@ -567,13 +567,18 @@ export const db = {
   savingsGoals: {
     async list(spaceId: string): Promise<SavingsGoal[]> {
       if (useSupabase && supabase) {
-        const { data, error } = await supabase
-          .from('savings_goals')
-          .select('*')
-          .eq('space_id', spaceId)
-          .order('name');
-        if (error) throw error;
-        return data || [];
+        try {
+          const { data, error } = await supabase
+            .from('savings_goals')
+            .select('*')
+            .eq('space_id', spaceId)
+            .order('name');
+          if (error) throw error;
+          return data || [];
+        } catch (err) {
+          console.warn("La tabla 'savings_goals' no existe en Supabase o falló la consulta. Retornando arreglo vacío para no romper la app.", err);
+          return [];
+        }
       } else {
         return getLocalData('mock_savings_goals').filter((g: SavingsGoal) => g.space_id === spaceId);
       }
