@@ -1759,4 +1759,86 @@ input:checked + .slider::before { transform: translateX(20px); background: #fff;
   font-size: 0.82rem;
 }
 
+/* =============================================
+   MOBILE RESPONSIVE UTILITIES & CARDS
+   ============================================= */
+/* Desktop by default */
+.show-mobile {
+  display: none !important;
+}
+.hide-mobile {
+  display: block !important;
+}
+.hide-mobile-flex {
+  display: flex !important;
+}
+
+@media (max-width: 639px) {
+  .show-mobile {
+    display: block !important;
+  }
+  .show-mobile-flex {
+    display: flex !important;
+  }
+  .hide-mobile {
+    display: none !important;
+  }
+  .hide-mobile-flex {
+    display: none !important;
+  }
+
+  .mobile-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .mobile-card-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: var(--shadow-xs);
+  }
+
+  .mobile-card-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .mobile-card-title {
+    font-weight: 600;
+    font-size: 0.88rem;
+    color: var(--text-primary);
+  }
+
+  .mobile-card-value {
+    font-weight: 700;
+    font-size: 0.88rem;
+    font-family: var(--font-mono);
+  }
+
+  .mobile-card-sub {
+    font-size: 0.72rem;
+    color: var(--text-secondary);
+  }
+
+  .mobile-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    border-top: 1px solid var(--divider);
+    padding-top: 8px;
+    margin-top: 4px;
+  }
+}
+
+
 

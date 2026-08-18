@@ -220,6 +220,7 @@ export default function Home() {
   const [showDebtModal,    setShowDebtModal]    = useState(false);
   const [showCardModal,    setShowCardModal]    = useState(false);
   const [showSavingsModal, setShowSavingsModal] = useState(false);
+  const [showManageDebtsModal, setShowManageDebtsModal] = useState(false);
   const [showAddFundsModal, setShowAddFundsModal] = useState<SavingsGoal | null>(null);
   const [amortDebt,    setAmortDebt]   = useState<Debt | null>(null);
   const [editingDebt,  setEditingDebt] = useState<Debt | null>(null);
@@ -771,9 +772,28 @@ export default function Home() {
                   {incomes.length === 0 ? (
                     <div className="empty-state"><Banknote size={32} style={{ opacity: 0.3 }} /><div className="empty-state-text">Sin ingresos registrados</div></div>
                   ) : (
-                    <div className="table-wrapper"><table className="data-table"><thead><tr><th>Concepto</th><th>Mes</th><th className="text-right">Valor</th><th></th></tr></thead>
-                      <tbody>{incomes.map(inc => (<tr key={inc.id}><td style={{ fontWeight: 600 }}>{inc.name}</td><td style={{ color: 'var(--text-secondary)' }}>{new Date(inc.year, inc.month - 1).toLocaleString('es-ES', { month: 'short', year: 'numeric' })}</td><td className="text-right mono" style={{ color: 'var(--green)', fontWeight: 700 }}>{fmt(inc.amount)}</td><td><button onClick={() => deleteIncome(inc.id)} className="btn btn-danger btn-icon btn-sm"><Trash2 size={13} /></button></td></tr>))}</tbody>
-                    </table></div>
+                    <>
+                      <div className="table-wrapper hide-mobile">
+                        <table className="data-table">
+                          <thead><tr><th>Concepto</th><th>Mes</th><th className="text-right">Valor</th><th></th></tr></thead>
+                          <tbody>{incomes.map(inc => (<tr key={inc.id}><td style={{ fontWeight: 600 }}>{inc.name}</td><td style={{ color: 'var(--text-secondary)' }}>{new Date(inc.year, inc.month - 1).toLocaleString('es-ES', { month: 'short', year: 'numeric' })}</td><td className="text-right mono" style={{ color: 'var(--green)', fontWeight: 700 }}>{fmt(inc.amount)}</td><td><button onClick={() => deleteIncome(inc.id)} className="btn btn-danger btn-icon btn-sm"><Trash2 size={13} /></button></td></tr>))}</tbody>
+                        </table>
+                      </div>
+                      <div className="mobile-card-list show-mobile">
+                        {incomes.map(inc => (
+                          <div key={inc.id} className="mobile-card-item">
+                            <div className="mobile-card-row">
+                              <span className="mobile-card-title">{inc.name}</span>
+                              <span className="mobile-card-value text-green">{fmt(inc.amount)}</span>
+                            </div>
+                            <div className="mobile-card-row">
+                              <span className="mobile-card-sub">{new Date(inc.year, inc.month - 1).toLocaleString('es-ES', { month: 'long', year: 'numeric' })}</span>
+                              <button onClick={() => deleteIncome(inc.id)} className="btn btn-danger btn-sm" style={{ padding: '4px 10px', fontSize: '0.72rem' }}><Trash2 size={11} /> Eliminar</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
 
@@ -786,66 +806,113 @@ export default function Home() {
                   {fixedExpenses.length === 0 ? (
                     <div className="empty-state"><Receipt size={32} style={{ opacity: 0.3 }} /><div className="empty-state-text">Sin egresos fijos</div></div>
                   ) : (
-                    <div className="table-wrapper"><table className="data-table"><thead><tr><th>Concepto</th><th>Categoría</th><th className="text-right">Valor</th><th></th></tr></thead>
-                      <tbody>{fixedExpenses.map(exp => (<tr key={exp.id}><td style={{ fontWeight: 600 }}>{exp.name}</td><td><span className="badge badge-gray">{exp.category}</span></td><td className="text-right mono" style={{ color: 'var(--red)', fontWeight: 700 }}>{fmt(exp.amount)}</td><td><button onClick={() => deleteExpense(exp.id)} className="btn btn-danger btn-icon btn-sm"><Trash2 size={13} /></button></td></tr>))}</tbody>
-                    </table></div>
+                    <>
+                      <div className="table-wrapper hide-mobile">
+                        <table className="data-table">
+                          <thead><tr><th>Concepto</th><th>Categoría</th><th className="text-right">Valor</th><th></th></tr></thead>
+                          <tbody>{fixedExpenses.map(exp => (<tr key={exp.id}><td style={{ fontWeight: 600 }}>{exp.name}</td><td><span className="badge badge-gray">{exp.category}</span></td><td className="text-right mono" style={{ color: 'var(--red)', fontWeight: 700 }}>{fmt(exp.amount)}</td><td><button onClick={() => deleteExpense(exp.id)} className="btn btn-danger btn-icon btn-sm"><Trash2 size={13} /></button></td></tr>))}</tbody>
+                        </table>
+                      </div>
+                      <div className="mobile-card-list show-mobile">
+                        {fixedExpenses.map(exp => (
+                          <div key={exp.id} className="mobile-card-item">
+                            <div className="mobile-card-row">
+                              <span className="mobile-card-title">{exp.name}</span>
+                              <span className="mobile-card-value text-red">{fmt(exp.amount)}</span>
+                            </div>
+                            <div className="mobile-card-row">
+                              <span className="badge badge-gray">{exp.category}</span>
+                              <button onClick={() => deleteExpense(exp.id)} className="btn btn-danger btn-sm" style={{ padding: '4px 10px', fontSize: '0.72rem' }}><Trash2 size={11} /> Eliminar</button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
 
                 {/* Deudas */}
                 <div className="card">
                   <div className="section-header">
-                    <div><div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 7 }}><CreditCard size={16} />Deudas y Cuotas</div><div className="section-subtitle">Compras financiadas y créditos</div></div>
-                    <button className="btn btn-primary btn-sm" onClick={() => setShowDebtModal(true)}><Plus size={14} /> Agregar</button>
+                    <div>
+                      <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 7 }}><CreditCard size={16} />Deudas y Cuotas</div>
+                      <div className="section-subtitle">{activeDebtsDetails.filter(d => !d.isCompleted).length} cuotas activas este mes</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button className="btn btn-secondary btn-sm" onClick={() => setShowManageDebtsModal(true)}><Edit2 size={13} /> Administrar deudas</button>
+                      <button className="btn btn-primary btn-sm" onClick={() => setShowDebtModal(true)}><Plus size={14} /> Agregar</button>
+                    </div>
                   </div>
                   {activeDebtsDetails.length === 0 ? (
                     <div className="empty-state"><Sparkles size={32} style={{ opacity: 0.3 }} /><div className="empty-state-text">Sin deudas registradas</div></div>
                   ) : (
-                    <div className="debt-list">
-                      {activeDebtsDetails.map(debt => {
-                        const pct = Math.round((debt.installments_paid / debt.total_installments) * 100);
-                        const remaining = debt.total_installments - debt.installments_paid;
-                        const linkedCard = cards.find(c => c.id === debt.card_id);
-                        return (
-                          <div key={debt.id} className={`debt-card ${debt.isCompleted ? 'completed' : ''}`}>
-                            <div className="debt-card-header">
-                              <div>
-                                <div className="debt-name">{debt.name}</div>
-                                <div className="debt-billing-tags" style={{ padding: '6px 0 0' }}>
-                                  {linkedCard && <span className="billing-tag"><div className="credit-card-chip" style={{ width: 14, height: 10, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />{linkedCard.name}</span>}
-                                  {(debt.cutoff_day || linkedCard) && <span className="billing-tag"><Scissors size={10} /> Corte: día {linkedCard ? linkedCard.cutoff_day : debt.cutoff_day}</span>}
-                                  {(debt.payment_day || linkedCard) && <span className="billing-tag"><Calendar size={10} /> Pago: día {linkedCard ? linkedCard.cutoff_day + 15 : debt.payment_day}</span>}
-                                </div>
+                    <>
+                      {/* Desktop Summary Table */}
+                      <div className="table-wrapper hide-mobile">
+                        <table className="data-table">
+                          <thead>
+                            <tr>
+                              <th>Deuda</th>
+                              <th>Cuota</th>
+                              <th>Tarjeta / Corte</th>
+                              <th className="text-right">Valor cuota</th>
+                              <th className="text-right">Saldo restante</th>
+                              <th></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {activeDebtsDetails.map(debt => {
+                              const linkedCard = cards.find(c => c.id === debt.card_id);
+                              return (
+                                <tr key={debt.id} className={debt.isCompleted ? 'paid' : ''} style={{ opacity: debt.isCompleted ? 0.6 : 1 }}>
+                                  <td style={{ fontWeight: 600 }}>{debt.name}</td>
+                                  <td>{debt.isCompleted ? 'Pagada' : `Cuota #${debt.installments_paid + 1} de ${debt.total_installments}`}</td>
+                                  <td>
+                                    {linkedCard ? linkedCard.name : 'Manual'} 
+                                    {debt.cutoff_day ? ` · Corte día ${debt.cutoff_day}` : ''}
+                                  </td>
+                                  <td className="text-right mono font-semibold" style={{ color: debt.isCompleted ? 'var(--text-muted)' : 'var(--text-primary)' }}>
+                                    {fmt(debt.currentQuota)}
+                                  </td>
+                                  <td className="text-right mono text-muted">
+                                    {fmt(debt.isCompleted ? 0 : debt.remainingBalance)}
+                                  </td>
+                                  <td className="text-right">
+                                    {!debt.isCompleted && (
+                                      <button className="btn btn-success btn-sm" style={{ padding: '4px 10px', fontSize: '0.72rem' }} onClick={() => markInstallmentPaid(debt)}>Pagar cuota</button>
+                                    )}
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Mobile Summary Cards */}
+                      <div className="mobile-card-list show-mobile">
+                        {activeDebtsDetails.map(debt => {
+                          const linkedCard = cards.find(c => c.id === debt.card_id);
+                          return (
+                            <div key={debt.id} className="mobile-card-item" style={{ opacity: debt.isCompleted ? 0.6 : 1 }}>
+                              <div className="mobile-card-row">
+                                <span className="mobile-card-title">{debt.name}</span>
+                                <span className="mobile-card-value text-orange">{fmt(debt.currentQuota)}</span>
                               </div>
-                              <span className={`debt-status ${debt.isCompleted ? 'done' : 'active'}`}>
-                                {debt.isCompleted ? <><CheckCircle2 size={11} style={{ display: 'inline', marginRight: 3 }} />Pagada</> : <><Clock size={11} style={{ display: 'inline', marginRight: 3 }} />{remaining} cuota{remaining !== 1 ? 's' : ''}</>}
-                              </span>
-                            </div>
-                            <div className="debt-card-body">
-                              <div className="debt-stat"><div className="debt-stat-label">Capital total</div><div className="debt-stat-value">{fmt(debt.total_capital)}</div></div>
-                              <div className="debt-stat"><div className="debt-stat-label">Saldo pendiente</div><div className={`debt-stat-value ${debt.isCompleted ? '' : 'orange'}`}>{fmt(debt.isCompleted ? 0 : debt.remainingBalance + debt.fixed_capital_payment)}</div></div>
-                              <div className="debt-stat"><div className="debt-stat-label">Interés</div><div className="debt-stat-value">{debt.has_interest ? `${debt.monthly_interest_rate}% / mes` : 'Sin interés'}</div></div>
-                            </div>
-                            <div style={{ margin: '4px 20px 0' }}>
-                              <div className="progress-bar"><div className="progress-fill" style={{ width: `${pct}%`, background: debt.isCompleted ? 'var(--green)' : 'var(--orange)' }} /></div>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '0.7rem', color: 'var(--text-muted)' }}><span>{debt.installments_paid} / {debt.total_installments} pagadas</span><span>{pct}%</span></div>
-                            </div>
-                            {!debt.isCompleted && (
-                              <div className="debt-next-quota">
-                                <div className="debt-next-quota-label">Cuota <strong>#{debt.installments_paid + 1}</strong> · Capital <strong>{fmt(debt.fixed_capital_payment)}</strong>{debt.has_interest && <> + Interés <strong>{fmt(debt.currentInterest)}</strong></>}</div>
-                                <div className="debt-next-quota-amount">{fmt(debt.currentQuota)}</div>
+                              <div className="mobile-card-row">
+                                <span className="mobile-card-sub">
+                                  {debt.isCompleted ? 'Pagada 🎉' : `Cuota #${debt.installments_paid + 1} de ${debt.total_installments}`}
+                                  {linkedCard ? ` · ${linkedCard.name}` : ''}
+                                </span>
+                                {!debt.isCompleted && (
+                                  <button className="btn btn-success btn-sm" style={{ padding: '4px 10px', fontSize: '0.72rem' }} onClick={() => markInstallmentPaid(debt)}>Pagar</button>
+                                )}
                               </div>
-                            )}
-                            <div className="debt-card-actions">
-                              {!debt.isCompleted && <button className="btn btn-success btn-sm" onClick={() => markInstallmentPaid(debt)}><CheckCircle2 size={14} /> Cuota #{debt.installments_paid + 1} pagada</button>}
-                              <button className="btn btn-secondary btn-sm" onClick={() => setAmortDebt(debt)}><Eye size={13} /> Ver tabla</button>
-                              <button className="btn btn-secondary btn-sm" onClick={() => openEditDebt(debt)}><Edit2 size={13} /> Editar</button>
-                              <button className="btn btn-danger btn-icon btn-sm" onClick={() => deleteDebt(debt.id)}><Trash2 size={13} /></button>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -947,7 +1014,7 @@ export default function Home() {
                     )}
                   </div>
 
-                  <div className="excel-table-wrapper">
+                  <div className="excel-table-wrapper hide-mobile">
                     <table className="excel-table">
                       <thead>
                         <tr>
@@ -1007,6 +1074,43 @@ export default function Home() {
                         </tr>
                       </tbody>
                     </table>
+                  </div>
+
+                  <div className="mobile-card-list show-mobile" style={{ marginTop: 8 }}>
+                    {incomes.map((inc, idx) => (
+                      <div key={`inc-mob-${idx}`} className="mobile-card-row" style={{ fontSize: '0.8rem', padding: '6px 0', borderBottom: '1px dashed var(--divider)' }}>
+                        <span style={{ fontWeight: 500 }}>{inc.name} <span className="badge-green-subtle" style={{ fontSize: '0.62rem', marginLeft: 4 }}>Ingreso</span></span>
+                        <span className="text-green font-semibold">+{fmt(inc.amount)}</span>
+                      </div>
+                    ))}
+                    {fixedExpenses.map((exp, idx) => (
+                      <div key={`exp-mob-${idx}`} className="mobile-card-row" style={{ fontSize: '0.8rem', padding: '6px 0', borderBottom: '1px dashed var(--divider)' }}>
+                        <span>{exp.name} <span className="badge-red-subtle" style={{ fontSize: '0.62rem', marginLeft: 4 }}>Fijo</span></span>
+                        <span className="text-red font-semibold">-{fmt(exp.amount)}</span>
+                      </div>
+                    ))}
+                    {proj.debtItems.map((debt, idx) => (
+                      <div key={`debt-mob-${idx}`} className="mobile-card-row" style={{ fontSize: '0.8rem', padding: '6px 0', borderBottom: '1px dashed var(--divider)' }}>
+                        <div>
+                          <div style={{ fontWeight: 500 }}>{debt.name} <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>({debt.currentInstallment}/{debt.totalInstallments})</span></div>
+                        </div>
+                        <span className="text-red font-semibold">-{fmt(debt.quota)}</span>
+                      </div>
+                    ))}
+                    <div style={{ background: 'var(--surface-inset)', borderRadius: 'var(--radius-sm)', padding: 10, marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div className="mobile-card-row" style={{ fontSize: '0.78rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Ingresos:</span>
+                        <span className="text-green font-semibold">{fmt(proj.incomes)}</span>
+                      </div>
+                      <div className="mobile-card-row" style={{ fontSize: '0.78rem' }}>
+                        <span style={{ color: 'var(--text-secondary)' }}>Egresos + Deudas:</span>
+                        <span className="text-red font-semibold">-{fmt(proj.fixedExpenses + proj.debtsQuota)}</span>
+                      </div>
+                      <div className="mobile-card-row" style={{ fontSize: '0.82rem', fontWeight: 700, borderTop: '1px solid var(--border)', paddingTop: 6, marginTop: 2 }}>
+                        <span>Flujo Libre:</span>
+                        <span className={proj.cashFlow >= 0 ? 'text-green' : 'text-red'}>{proj.cashFlow >= 0 ? '+' : ''}{fmt(proj.cashFlow)}</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1413,7 +1517,7 @@ export default function Home() {
               <div><div className="modal-title">{amortDebt.name}</div><div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 2 }}>{fmt(amortDebt.total_capital)} · {amortDebt.total_installments} cuotas · {amortDebt.has_interest ? `${amortDebt.monthly_interest_rate}% mensual` : 'Sin interés'}</div></div>
               <button className="btn btn-ghost btn-icon" onClick={() => setAmortDebt(null)}><X size={16} /></button>
             </div>
-            <div style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid var(--border)' }}>
+            <div className="hide-mobile" style={{ overflowX: 'auto', borderRadius: 10, border: '1px solid var(--border)' }}>
               <table className="amort-table">
                 <thead><tr><th>#</th><th>Capital</th><th>Interés</th><th>Cuota total</th><th>Saldo</th><th>Estado</th></tr></thead>
                 <tbody>
@@ -1429,7 +1533,107 @@ export default function Home() {
                 </tbody>
               </table>
             </div>
+
+            <div className="show-mobile" style={{ maxHeight: '55vh', overflowY: 'auto', paddingRight: 4 }}>
+              <div className="mobile-card-list">
+                {buildAmortTable(amortDebt).map(row => (
+                  <div key={row.num} className="mobile-card-item" style={{ borderLeft: row.isNext ? '4px solid var(--orange)' : '1px solid var(--border)', background: row.isNext ? 'var(--orange-bg)' : 'var(--surface)' }}>
+                    <div className="mobile-card-row">
+                      <span className="mobile-card-title">Cuota #{row.num}</span>
+                      <span className="mobile-card-value">{fmt(row.quota)}</span>
+                    </div>
+                    <div className="mobile-card-row" style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                      <span>Capital: {fmt(row.capital)} · Interés: {fmt(row.interest)}</span>
+                      {row.paid ? (
+                        <span className="badge badge-green" style={{ fontSize: '0.62rem', padding: '1px 5px' }}>Pagada</span>
+                      ) : row.isNext ? (
+                        <span className="badge badge-orange" style={{ fontSize: '0.62rem', padding: '1px 5px' }}>Próxima</span>
+                      ) : (
+                        <span className="badge badge-gray" style={{ fontSize: '0.62rem', padding: '1px 5px' }}>Pendiente</span>
+                      )}
+                    </div>
+                    <div className="mobile-card-row" style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      <span>Saldo restante: {fmt(row.remaining)}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
             <div className="modal-footer"><button className="btn btn-primary" onClick={() => setAmortDebt(null)}>Cerrar</button></div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Debts Modal */}
+      {showManageDebtsModal && (
+        <div className="modal-overlay" onClick={e => { if (e.target === e.currentTarget) setShowManageDebtsModal(false); }}>
+          <div className="modal-content modal-wide" style={{ maxWidth: '800px' }}>
+            <div className="modal-header">
+              <div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <CreditCard size={18} />
+                Gestión de Deudas
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button className="btn btn-primary btn-sm" onClick={() => { setShowDebtModal(true); }}><Plus size={14} /> Nueva deuda</button>
+                <button className="btn btn-ghost btn-icon" onClick={() => setShowManageDebtsModal(false)}><X size={16} /></button>
+              </div>
+            </div>
+            
+            <div style={{ maxHeight: '70vh', overflowY: 'auto', paddingRight: 4, display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {activeDebtsDetails.length === 0 ? (
+                <div className="empty-state"><Sparkles size={32} style={{ opacity: 0.3 }} /><div className="empty-state-text">Sin deudas registradas</div></div>
+              ) : (
+                <div className="debt-list" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  {activeDebtsDetails.map(debt => {
+                    const pct = Math.round((debt.installments_paid / debt.total_installments) * 100);
+                    const remaining = debt.total_installments - debt.installments_paid;
+                    const linkedCard = cards.find(c => c.id === debt.card_id);
+                    return (
+                      <div key={debt.id} className={`debt-card ${debt.isCompleted ? 'completed' : ''}`}>
+                        <div className="debt-card-header">
+                          <div>
+                            <div className="debt-name">{debt.name}</div>
+                            <div className="debt-billing-tags" style={{ padding: '6px 0 0' }}>
+                              {linkedCard && <span className="billing-tag"><div className="credit-card-chip" style={{ width: 14, height: 10, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />{linkedCard.name}</span>}
+                              {(debt.cutoff_day || linkedCard) && <span className="billing-tag"><Scissors size={10} /> Corte: día {linkedCard ? linkedCard.cutoff_day : debt.cutoff_day}</span>}
+                              {(debt.payment_day || linkedCard) && <span className="billing-tag"><Calendar size={10} /> Pago: día {linkedCard ? linkedCard.cutoff_day + 15 : debt.payment_day}</span>}
+                            </div>
+                          </div>
+                          <span className={`debt-status ${debt.isCompleted ? 'done' : 'active'}`}>
+                            {debt.isCompleted ? <><CheckCircle2 size={11} style={{ display: 'inline', marginRight: 3 }} />Pagada</> : <><Clock size={11} style={{ display: 'inline', marginRight: 3 }} />{remaining} cuota{remaining !== 1 ? 's' : ''}</>}
+                          </span>
+                        </div>
+                        <div className="debt-card-body">
+                          <div className="debt-stat"><div className="debt-stat-label">Capital total</div><div className="debt-stat-value">{fmt(debt.total_capital)}</div></div>
+                          <div className="debt-stat"><div className="debt-stat-label">Saldo pendiente</div><div className={`debt-stat-value ${debt.isCompleted ? '' : 'orange'}`}>{fmt(debt.isCompleted ? 0 : debt.remainingBalance + debt.fixed_capital_payment)}</div></div>
+                          <div className="debt-stat"><div className="debt-stat-label">Interés</div><div className="debt-stat-value">{debt.has_interest ? `${debt.monthly_interest_rate}% / mes` : 'Sin interés'}</div></div>
+                        </div>
+                        <div style={{ margin: '4px 20px 0' }}>
+                          <div className="progress-bar"><div className="progress-fill" style={{ width: `${pct}%`, background: debt.isCompleted ? 'var(--green)' : 'var(--orange)' }} /></div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: '0.7rem', color: 'var(--text-muted)' }}><span>{debt.installments_paid} / {debt.total_installments} pagadas</span><span>{pct}%</span></div>
+                        </div>
+                        {!debt.isCompleted && (
+                          <div className="debt-next-quota">
+                            <div className="debt-next-quota-label">Cuota <strong>#{debt.installments_paid + 1}</strong> · Capital <strong>{fmt(debt.fixed_capital_payment)}</strong>{debt.has_interest && <> + Interés <strong>{fmt(debt.currentInterest)}</strong></>}</div>
+                            <div className="debt-next-quota-amount">{fmt(debt.currentQuota)}</div>
+                          </div>
+                        )}
+                        <div className="debt-card-actions">
+                          {!debt.isCompleted && <button className="btn btn-success btn-sm" onClick={() => markInstallmentPaid(debt)}><CheckCircle2 size={14} /> Cuota #{debt.installments_paid + 1} pagada</button>}
+                          <button className="btn btn-secondary btn-sm" onClick={() => setAmortDebt(debt)}><Eye size={13} /> Ver tabla</button>
+                          <button className="btn btn-secondary btn-sm" onClick={() => openEditDebt(debt)}><Edit2 size={13} /> Editar</button>
+                          <button className="btn btn-danger btn-icon btn-sm" onClick={() => deleteDebt(debt.id)}><Trash2 size={13} /></button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+            
+            <div className="modal-footer">
+              <button className="btn btn-primary" onClick={() => setShowManageDebtsModal(false)}>Cerrar</button>
+            </div>
           </div>
         </div>
       )}
