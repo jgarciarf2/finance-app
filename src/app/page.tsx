@@ -199,6 +199,7 @@ export default function Home() {
   const [theme, setTheme]             = useState<'dark' | 'light'>('dark');
   const [copied, setCopied]           = useState(false);
   const [showBillingSummary, setShowBillingSummary] = useState(false);
+  const [expandedMonth, setExpandedMonth] = useState<number | null>(0);
 
 
   /* data */
@@ -838,39 +839,46 @@ export default function Home() {
             ══════════════════════════════ */}
         {currentTab === 'dashboard' && (
           <>
-            {/* Stat Cards */}
-             <div className="summary-grid">
-              {[
-                { icon: <Wallet size={13} />,    label: 'Ingresos del mes',     value: totalIncomes,       cls: 'green' },
-                { icon: <Receipt size={13} />,   label: 'Egresos fijos',        value: totalFixedExpenses, cls: 'red' },
-                { icon: <CreditCard size={13} />,label: 'Cuotas del mes',       value: totalDebtQuota,     cls: 'orange' },
-                { icon: <Target size={13} />,    label: 'Ahorrado total',       value: totalSaved,         cls: 'blue' },
-                { icon: <Landmark size={13} />,  label: 'Deuda total restante', value: totalRemainingDebt, cls: 'red' },
-              ].map((s, i) => (
-                <div key={i} className="stat-card">
-                  <div className="stat-label" style={{ display: 'flex', alignItems: 'center', gap: 5 }}>{s.icon}{s.label}</div>
-                  <div className={`stat-value ${s.cls}`}>{fmt(s.value)}</div>
-                  <div className="stat-sub">
-                    {i === 0 && `${incomes.length} fuente${incomes.length !== 1 ? 's' : ''}`}
-                    {i === 1 && `${fixedExpenses.length} concepto${fixedExpenses.length !== 1 ? 's' : ''}`}
-                    {i === 2 && `${activeDebtsDetails.filter(d => !d.isCompleted).length} activa${activeDebtsDetails.filter(d => !d.isCompleted).length !== 1 ? 's' : ''}`}
-                    {i === 3 && `${savingsGoals.length} meta${savingsGoals.length !== 1 ? 's' : ''}`}
-                    {i === 4 && `${debts.length} obligación${debts.length !== 1 ? 'es' : ''}`}
-                  </div>
+            {/* Hero: flujo libre */}
+            <div className="card hero">
+              <div>
+                <div className="hero-label">
+                  {freeCashFlow >= 0 ? 'Flujo de caja libre' : 'Déficit mensual'}
+                  <span className={`pill ${freeCashFlow >= 0 ? 'pos' : 'neg'}`}>{freeCashFlow >= 0 ? <TrendingUp size={11} /> : <TrendingDown size={11} />}{savingsRate.toFixed(0)}% de tus ingresos</span>
                 </div>
-              ))}
+                <div className="hero-value" style={{ color: freeCashFlow >= 0 ? 'var(--text-primary)' : 'var(--red)' }}>{freeCashFlow < 0 && '−'}{fmt(Math.abs(freeCashFlow))}</div>
+                <div className="hero-sub">Ingresos − egresos fijos − cuotas del mes</div>
+              </div>
+              <div>
+                <div className="compose-bar">
+                  {donutSegments.map((seg, i) => <span key={i} style={{ width: `${(Math.max(0, seg.value) / (Math.max(totalIncomes, totalFixedExpenses + totalDebtQuota, 1))) * 100}%`, background: seg.color }} />)}
+                </div>
+                <div className="compose-legend">
+                  {donutSegments.map((seg, i) => (
+                    <div key={i}>
+                      <div className="k"><i style={{ background: seg.color }} />{seg.label}</div>
+                      <div className="v">{fmt(seg.value)}</div>
+                      <div className="p">{totalIncomes > 0 ? ((seg.value / totalIncomes) * 100).toFixed(0) : 0}% del ingreso</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
 
-            {/* FCF Banner */}
-            <div className={`fcf-banner ${freeCashFlow >= 0 ? 'positive' : 'negative'}`} style={{ marginBottom: 20 }}>
-              <div>
-                <div className="fcf-banner-label" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  {freeCashFlow >= 0 ? <TrendingUp size={15} /> : <TrendingDown size={15} />}
-                  {freeCashFlow >= 0 ? 'Flujo de caja libre' : 'Déficit mensual'}
+            {/* KPIs */}
+            <div className="kpi-grid">
+              {[
+                { label: 'Ingresos',        value: totalIncomes,       dot: 'var(--green)',  sub: `${incomes.length} fuente${incomes.length !== 1 ? 's' : ''}` },
+                { label: 'Egresos fijos',   value: totalFixedExpenses, dot: 'var(--red)',    sub: `${fixedExpenses.length} concepto${fixedExpenses.length !== 1 ? 's' : ''}` },
+                { label: 'Deuda restante',  value: totalRemainingDebt, dot: 'var(--orange)', sub: `${activeDebtsDetails.filter(d => !d.isCompleted).length} activa${activeDebtsDetails.filter(d => !d.isCompleted).length !== 1 ? 's' : ''}` },
+                { label: 'Ahorrado',        value: totalSaved,         dot: 'var(--blue)',   sub: `${savingsGoals.length} meta${savingsGoals.length !== 1 ? 's' : ''}` },
+              ].map((k, i) => (
+                <div key={i} className="kpi">
+                  <div className="kpi-label"><i style={{ background: k.dot }} />{k.label}</div>
+                  <div className="kpi-value">{fmt(k.value)}</div>
+                  <div className="kpi-sub">{k.sub}</div>
                 </div>
-                <div style={{ fontSize: '0.75rem', marginTop: 2, opacity: 0.75 }}>Ingresos − Egresos fijos − Cuotas del mes</div>
-              </div>
-              <div className="fcf-banner-amount">{fmt(Math.abs(freeCashFlow))}</div>
+              ))}
             </div>
 
             {/* ── BILLING SUMMARY (Resumen del Mes por Tarjeta) ── */}
@@ -1196,129 +1204,76 @@ export default function Home() {
             TAB: PROJECTIONS
             ══════════════════════════════ */}
         {currentTab === 'projections' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <div className="card" style={{ padding: '18px 22px' }}>
-              <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 7 }}><Calendar size={16} /> Proyección hasta el fin de tus deudas</div>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: 6 }}>{projections.length} meses proyectados{debtFreeDate && <> · Libre de deudas: <strong style={{ color: 'var(--green)' }}>{debtFreeDate}</strong></>}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div className="kpi-grid" style={{ marginBottom: 0 }}>
+              {[
+                { label: 'Meses proyectados', value: String(projections.length), sub: 'Hasta el fin de tus deudas', dot: 'var(--blue)' },
+                { label: 'Libre de deudas',   value: debtFreeDate ? debtFreeDate.replace(/^./, c => c.toUpperCase()) : (debts.length === 0 ? 'Ya eres libre' : '—'), sub: 'Última cuota proyectada', dot: 'var(--green)' },
+                { label: 'Flujo promedio',    value: fmt(projections.reduce((a, p) => a + p.cashFlow, 0) / (projections.length || 1)), sub: 'Por mes proyectado', dot: 'var(--purple)' },
+                { label: 'Interés restante',  value: fmt(totalInterestRemaining), sub: 'Hasta saldar deudas', dot: 'var(--orange)' },
+              ].map((k, i) => (
+                <div key={i} className="kpi">
+                  <div className="kpi-label"><i style={{ background: k.dot }} />{k.label}</div>
+                  <div className="kpi-value" style={{ fontSize: '1.1rem' }}>{k.value}</div>
+                  <div className="kpi-sub">{k.sub}</div>
+                </div>
+              ))}
             </div>
+
             {lineChartData.length > 1 && (
               <div className="card">
                 <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 16 }}><Activity size={16} /> Tendencia de flujo de caja libre</div>
                 <LineAreaChart data={lineChartData} height={170} />
               </div>
             )}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-              {projections.map((proj, i) => (
-                <div className="excel-card card" key={i}>
-                  <div className="excel-card-header">
-                    <div className="excel-month-title">{proj.label}</div>
-                    {proj.isDebtFree ? (
-                      <span className="badge badge-green"><Sparkles size={10} style={{ display: 'inline', marginRight: 3 }} />Libre de deudas</span>
-                    ) : (
-                      <span className="badge badge-gray"><Clock size={10} style={{ display: 'inline', marginRight: 3 }} />Deudas activas</span>
+
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div style={{ padding: '18px 20px 12px' }}>
+                <div className="section-title">Detalle mensual</div>
+                <div className="section-subtitle">Toca un mes para ver ingresos, egresos y cuotas</div>
+              </div>
+              <div className="proj-head">
+                <span>Mes</span><span>Ingresos</span><span>Egresos</span><span>Cuotas</span><span>Flujo libre</span><span />
+              </div>
+              {projections.map((proj, i) => {
+                const open = expandedMonth === i;
+                return (
+                  <div key={i} className={`proj-row ${open ? 'open' : ''}`}>
+                    <button className="proj-row-main" onClick={() => setExpandedMonth(open ? null : i)} aria-expanded={open}>
+                      <span className="proj-month">{proj.label}{proj.isDebtFree && <span className="tag-free">Sin deudas</span>}</span>
+                      <span className="proj-num proj-opt">{fmt(proj.incomes)}</span>
+                      <span className="proj-num proj-opt">{fmt(proj.fixedExpenses)}</span>
+                      <span className="proj-num proj-opt">{fmt(proj.debtsQuota)}</span>
+                      <span className={`proj-num flow ${proj.cashFlow < 0 ? 'neg' : ''}`}>{proj.cashFlow < 0 && '−'}{fmt(Math.abs(proj.cashFlow))}</span>
+                      <span className="proj-chev"><ChevronRight size={16} /></span>
+                    </button>
+                    {open && (
+                      <div className="proj-detail">
+                        <div>
+                          <h4>Ingresos · {fmt(proj.incomes)}</h4>
+                          {incomes.length === 0 ? <div className="proj-line">Sin ingresos</div> : incomes.map(inc => <div key={inc.id} className="proj-line"><span>{inc.name}</span><b>{fmt(inc.amount)}</b></div>)}
+                        </div>
+                        <div>
+                          <h4>Egresos fijos · {fmt(proj.fixedExpenses)}</h4>
+                          {fixedExpenses.length === 0 ? <div className="proj-line">Sin egresos</div> : fixedExpenses.map(exp => <div key={exp.id} className="proj-line"><span>{exp.name}</span><b>{fmt(exp.amount)}</b></div>)}
+                        </div>
+                        <div>
+                          <h4>Cuotas de deuda · {fmt(proj.debtsQuota)}</h4>
+                          {proj.debtItems.length === 0 ? <div className="proj-line">Sin cuotas este mes</div> : proj.debtItems.map((debt, idx) => (
+                            <div key={idx} className="proj-line">
+                              <span>
+                                {debt.name} <span style={{ color: 'var(--text-muted)' }}>({debt.currentInstallment}/{debt.totalInstallments})</span>
+                                <div className="proj-debt-meta">Abonado {fmt(debt.paidCapital)} · Restante {fmt(debt.remainingBalance)}</div>
+                              </span>
+                              <b>{fmt(debt.quota)}</b>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
                     )}
                   </div>
-
-                  <div className="excel-table-wrapper hide-mobile">
-                    <table className="excel-table">
-                      <thead>
-                        <tr>
-                          <th>Concepto / Descripción</th>
-                          <th>Tipo</th>
-                          <th className="text-right">Monto</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {incomes.map((inc, idx) => (
-                          <tr key={`inc-${idx}`}>
-                            <td>{inc.name}</td>
-                            <td><span className="badge-green-subtle">Ingreso</span></td>
-                            <td className="text-right text-green">+{fmt(inc.amount)}</td>
-                          </tr>
-                        ))}
-                        {fixedExpenses.map((exp, idx) => (
-                          <tr key={`exp-${idx}`}>
-                            <td>{exp.name}</td>
-                            <td><span className="badge-red-subtle">Egreso fijo</span></td>
-                            <td className="text-right text-red">-{fmt(exp.amount)}</td>
-                          </tr>
-                        ))}
-                        {proj.debtItems.map((debt, idx) => (
-                          <tr key={`debt-${idx}`}>
-                            <td>
-                              <div style={{ fontWeight: 600 }}>{debt.name} <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 400 }}>({debt.currentInstallment}/{debt.totalInstallments})</span></div>
-                              <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 4, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                                <span><strong>Total:</strong> {fmt(debt.totalCapital)}</span>
-                                <span style={{ color: 'var(--border-focus)' }}>•</span>
-                                <span><strong>Abonado:</strong> {fmt(debt.paidCapital)}</span>
-                                <span style={{ color: 'var(--border-focus)' }}>•</span>
-                                <span><strong>Restante:</strong> {fmt(debt.remainingBalance)}</span>
-                              </div>
-                            </td>
-                            <td><span className="badge-orange-subtle">Cuota deuda</span></td>
-                            <td className="text-right text-orange">-{fmt(debt.quota)}</td>
-                          </tr>
-                        ))}
-
-                        <tr className="excel-total-row">
-                          <td><strong>Total Ingresos</strong></td>
-                          <td></td>
-                          <td className="text-right text-green"><strong>{fmt(proj.incomes)}</strong></td>
-                        </tr>
-                        <tr className="excel-total-row">
-                          <td><strong>Total Egresos</strong></td>
-                          <td></td>
-                          <td className="text-right text-red"><strong>-{fmt(proj.fixedExpenses + proj.debtsQuota)}</strong></td>
-                        </tr>
-                        <tr className="excel-summary-row">
-                          <td><strong>Flujo Libre (Balance)</strong></td>
-                          <td></td>
-                          <td className={`text-right ${proj.cashFlow >= 0 ? 'text-green' : 'text-red'}`}>
-                            <strong>{proj.cashFlow >= 0 ? '+' : ''}{fmt(proj.cashFlow)}</strong>
-                          </td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="mobile-card-list show-mobile" style={{ marginTop: 8 }}>
-                    {incomes.map((inc, idx) => (
-                      <div key={`inc-mob-${idx}`} className="mobile-card-row" style={{ fontSize: '0.8rem', padding: '6px 0', borderBottom: '1px dashed var(--divider)' }}>
-                        <span style={{ fontWeight: 500 }}>{inc.name} <span className="badge-green-subtle" style={{ fontSize: '0.62rem', marginLeft: 4 }}>Ingreso</span></span>
-                        <span className="text-green font-semibold">+{fmt(inc.amount)}</span>
-                      </div>
-                    ))}
-                    {fixedExpenses.map((exp, idx) => (
-                      <div key={`exp-mob-${idx}`} className="mobile-card-row" style={{ fontSize: '0.8rem', padding: '6px 0', borderBottom: '1px dashed var(--divider)' }}>
-                        <span>{exp.name} <span className="badge-red-subtle" style={{ fontSize: '0.62rem', marginLeft: 4 }}>Fijo</span></span>
-                        <span className="text-red font-semibold">-{fmt(exp.amount)}</span>
-                      </div>
-                    ))}
-                    {proj.debtItems.map((debt, idx) => (
-                      <div key={`debt-mob-${idx}`} className="mobile-card-row" style={{ fontSize: '0.8rem', padding: '6px 0', borderBottom: '1px dashed var(--divider)' }}>
-                        <div>
-                          <div style={{ fontWeight: 500 }}>{debt.name} <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>({debt.currentInstallment}/{debt.totalInstallments})</span></div>
-                        </div>
-                        <span className="text-red font-semibold">-{fmt(debt.quota)}</span>
-                      </div>
-                    ))}
-                    <div style={{ background: 'var(--surface-inset)', borderRadius: 'var(--radius-sm)', padding: 10, marginTop: 8, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <div className="mobile-card-row" style={{ fontSize: '0.78rem' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Ingresos:</span>
-                        <span className="text-green font-semibold">{fmt(proj.incomes)}</span>
-                      </div>
-                      <div className="mobile-card-row" style={{ fontSize: '0.78rem' }}>
-                        <span style={{ color: 'var(--text-secondary)' }}>Egresos + Deudas:</span>
-                        <span className="text-red font-semibold">-{fmt(proj.fixedExpenses + proj.debtsQuota)}</span>
-                      </div>
-                      <div className="mobile-card-row" style={{ fontSize: '0.82rem', fontWeight: 700, borderTop: '1px solid var(--border)', paddingTop: 6, marginTop: 2 }}>
-                        <span>Flujo Libre:</span>
-                        <span className={proj.cashFlow >= 0 ? 'text-green' : 'text-red'}>{proj.cashFlow >= 0 ? '+' : ''}{fmt(proj.cashFlow)}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
