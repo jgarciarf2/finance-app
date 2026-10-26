@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { getCycle, dueDateInCycle, cycleDebtQuota, loadCycleState, saveCycleState, DEFAULT_CYCLE_STATE, CycleState } from '@/lib/cycle';
 import { db, Income, FixedExpense, Debt, Card, Family, FamilyMember, MemberSummary, SavingsGoal } from '@/lib/db';
 import {
   Wallet, Receipt, CreditCard, Landmark, TrendingUp, TrendingDown,
@@ -8,7 +9,7 @@ import {
   Edit2, X, Scissors, Calendar, Banknote, Clock, Sparkles, PieChart,
   BarChart2, Activity, ArrowUpRight, AlertTriangle, Target,
   Users, UserPlus, Copy, Check, Hash, CreditCard as CardIcon,
-  Shield, ChevronRight, Info,
+  Shield, ChevronRight, Info, Circle,
 } from 'lucide-react';
 
 /* ── helpers ─────────────────────────────────────────────── */
@@ -176,7 +177,7 @@ const DebtFormFields = ({ form, setForm, cards }: {
 /* ═══════════════════════════════════════════════════════════
    MAIN COMPONENT
    ═══════════════════════════════════════════════════════════ */
-type Tab = 'dashboard' | 'projections' | 'savings' | 'cards' | 'family';
+type Tab = 'cycle' | 'dashboard' | 'projections' | 'savings' | 'cards' | 'family';
 
 export default function Home() {
   /* auth */
@@ -187,10 +188,14 @@ export default function Home() {
   const [password, setPassword]       = useState('');
   const [authError, setAuthError]     = useState('');
   const [authLoading, setAuthLoading] = useState(false);
+  const [forgotMode, setForgotMode]     = useState(false);   // pedir enlace de recuperación
+  const [recoveryMode, setRecoveryMode] = useState(false);   // elegir nueva contraseña
+  const [newPassword, setNewPassword]   = useState('');
+  const [authInfo, setAuthInfo]         = useState('');
 
   /* app */
   const [loading, setLoading]         = useState(true);
-  const [currentTab, setCurrentTab]   = useState<Tab>('dashboard');
+  const [currentTab, setCurrentTab]   = useState<Tab>('cycle');
   const [theme, setTheme]             = useState<'dark' | 'light'>('dark');
   const [copied, setCopied]           = useState(false);
   const [showBillingSummary, setShowBillingSummary] = useState(false);
@@ -202,6 +207,9 @@ export default function Home() {
   const [debts, setDebts]                 = useState<Debt[]>([]);
   const [cards, setCards]                 = useState<Card[]>([]);
   const [savingsGoals, setSavingsGoals]   = useState<SavingsGoal[]>([]);
+
+  /* ciclo de pago */
+  const [cycleState, setCycleState] = useState<CycleState>(DEFAULT_CYCLE_STATE);
 
   /* family */
   const [family, setFamily]               = useState<Family | null>(null);
@@ -244,6 +252,12 @@ export default function Home() {
   useEffect(() => { const s = typeof window !== 'undefined' && localStorage.getItem('fp-theme'); if (s === 'light' || s === 'dark') setTheme(s); }, []);
   useEffect(() => { document.documentElement.setAttribute('data-theme', theme); if (typeof window !== 'undefined') localStorage.setItem('fp-theme', theme); }, [theme]);
 
+  /* ── recuperación de contraseña ─────────────────────────── */
+  useEffect(() => {
+    if (window.location.hash.includes('type=recovery')) setRecoveryMode(true);
+    return db.auth.onPasswordRecovery(() => setRecoveryMode(true));
+  }, []);
+
   /* ── session ────────────────────────────────────────────── */
   useEffect(() => { checkSession(); }, []);
 
@@ -269,6 +283,9 @@ export default function Home() {
       if (userId) fetchFamily(userId);
     } finally { setLoading(false); }
   };
+
+  useEffect(() => { if (spaceId) setCycleState(loadCycleState(spaceId)); }, [spaceId]);
+  const updateCycleState = (next: CycleState) => { setCycleState(next); saveCycleState(spaceId, next); };
 
   const fetchFamily = useCallback(async (userId: string) => {
     try {
@@ -300,6 +317,30 @@ export default function Home() {
       const u: any = isLogin ? await db.auth.signIn(email, password) : await db.auth.signUp(email, password);
       setUser(u); setSpaceId(u.space_id || ''); await fetchAll(u.space_id || '', u.id);
     } catch (err: any) { setAuthError(err.message || 'Error de autenticación'); }
+    finally { setAuthLoading(false); }
+  };
+
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault(); setAuthError(''); setAuthInfo(''); setAuthLoading(true);
+    try {
+      await db.auth.requestPasswordReset(email);
+      if (db.isDemo) { setForgotMode(false); setRecoveryMode(true); }
+      else setAuthInfo('Te enviamos un correo con el enlace para crear una nueva contraseña. Revisa también spam.');
+    } catch (err: any) { setAuthError(err.message || 'No se pudo enviar el correo'); }
+    finally { setAuthLoading(false); }
+  };
+
+  const handleNewPassword = async (e: React.FormEvent) => {
+    e.preventDefault(); setAuthError('');
+    if (newPassword.length < 6) { setAuthError('La contraseña debe tener al menos 6 caracteres.'); return; }
+    setAuthLoading(true);
+    try {
+      await db.auth.updatePassword(newPassword, email);
+      setNewPassword(''); setRecoveryMode(false); setForgotMode(false);
+      if (window.location.hash) history.replaceState(null, '', window.location.pathname);
+      if (db.isDemo) { setPassword(''); setAuthInfo('Contraseña actualizada. Ya puedes iniciar sesión.'); }
+      else await checkSession();
+    } catch (err: any) { setAuthError(err.message || 'No se pudo actualizar la contraseña'); }
     finally { setAuthLoading(false); }
   };
 
@@ -355,6 +396,25 @@ export default function Home() {
     if (!confirm(`¿Marcar cuota #${debt.installments_paid + 1} de "${debt.name}" como pagada?`)) return;
     await db.debts.updateInstallments(debt.id, debt.installments_paid + 1); fetchAll(spaceId, user?.id);
   };
+
+  /* ── ciclo: marcar / desmarcar pagos ─────────────────────── */
+  const cycle = useMemo(() => getCycle(cycleState.payDay), [cycleState.payDay]);
+  const cyclePaid = cycleState.paid[cycle.key] || { debts: [], expenses: [] };
+
+  const setCyclePaid = (next: { debts: string[]; expenses: string[] }) =>
+    updateCycleState({ ...cycleState, paid: { ...cycleState.paid, [cycle.key]: next } });
+
+  const toggleCycleDebt = async (debt: Debt) => {
+    const isPaid = cyclePaid.debts.includes(debt.id);
+    try {
+      await db.debts.updateInstallments(debt.id, debt.installments_paid + (isPaid ? -1 : 1));
+      setCyclePaid({ ...cyclePaid, debts: isPaid ? cyclePaid.debts.filter(id => id !== debt.id) : [...cyclePaid.debts, debt.id] });
+      fetchAll(spaceId, user?.id);
+    } catch (err: any) { alert('No se pudo actualizar el pago: ' + err.message); }
+  };
+
+  const toggleCycleExpense = (id: string) =>
+    setCyclePaid({ ...cyclePaid, expenses: cyclePaid.expenses.includes(id) ? cyclePaid.expenses.filter(e => e !== id) : [...cyclePaid.expenses, id] });
 
   const openEditDebt = (debt: Debt) => {
     setEditDebtForm({ name: debt.name, total_capital: String(debt.total_capital), monthly_interest_rate: String(debt.monthly_interest_rate), total_installments: String(debt.total_installments), installments_paid: String(debt.installments_paid), has_interest: debt.has_interest, start_date: debt.start_date, card_id: debt.card_id || '', cutoff_day: debt.cutoff_day ? String(debt.cutoff_day) : '' });
@@ -472,6 +532,31 @@ export default function Home() {
     return acc + tot;
   }, 0);
 
+  /* ── Ciclo de pago ───────────────────────────────────────── */
+  const cycleItems = (() => {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const daysTo = (d: Date | null) => d ? Math.round((d.getTime() - today.getTime()) / 86400000) : null;
+    const debtItems = debts.flatMap(debt => {
+      const paid = cyclePaid.debts.includes(debt.id);
+      const q = cycleDebtQuota(debt, paid);
+      if (!q) return [];
+      const due = dueDateInCycle(debt.payment_day, cycle);
+      return [{ kind: 'debt' as const, id: debt.id, debt, name: debt.name, amount: q.quota, paid, due, daysToDue: daysTo(due),
+        sub: `Cuota ${q.installment}/${debt.total_installments}` + (cards.find(c => c.id === debt.card_id) ? ` · ${cards.find(c => c.id === debt.card_id)!.name}` : '') }];
+    });
+    const expenseItems = fixedExpenses.map(e => ({ kind: 'expense' as const, id: e.id, debt: null, name: e.name, amount: e.amount, paid: cyclePaid.expenses.includes(e.id), due: null as Date | null, daysToDue: null as number | null, sub: e.category }));
+    const byDue = (a: { paid: boolean; due: Date | null }, b: { paid: boolean; due: Date | null }) =>
+      Number(a.paid) - Number(b.paid) || (a.due?.getTime() ?? Infinity) - (b.due?.getTime() ?? Infinity);
+    return { debts: debtItems.sort(byDue), expenses: expenseItems.sort(byDue) };
+  })();
+  const cycleAll        = [...cycleItems.debts, ...cycleItems.expenses];
+  const cycleTotal      = cycleAll.reduce((a, i) => a + i.amount, 0);
+  const cyclePaidTotal  = cycleAll.filter(i => i.paid).reduce((a, i) => a + i.amount, 0);
+  const cyclePending    = cycleTotal - cyclePaidTotal;
+  const cycleInHand     = totalIncomes - cyclePaidTotal;       // lo que te queda ahora mismo
+  const cycleLeftover   = totalIncomes - cycleTotal;           // lo que sobra cuando pagues todo
+  const cycleFmtDay     = (d: Date) => d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+
   /* ── Billing summary ─────────────────────────────────────── */
   const billingSummary = useMemo(() => {
     const activeDebts = activeDebtsDetails.filter(d => !d.isCompleted);
@@ -562,6 +647,41 @@ export default function Home() {
   /* ═══════════════════════════════════════════════════════════
      AUTH SCREEN
      ═══════════════════════════════════════════════════════════ */
+  if (recoveryMode) return (
+    <div className="auth-container">
+      <div className="auth-card">
+        <div className="auth-logo" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}><Wallet size={28} /> Finanzas Pro</div>
+        <p className="auth-sub">Crea tu nueva contraseña</p>
+        {authError && <div className="auth-error">{authError}</div>}
+        <form onSubmit={handleNewPassword}>
+          {db.isDemo && <div className="form-group"><label>Correo electrónico</label><input type="email" className="form-control" value={email} onChange={e => setEmail(e.target.value)} required /></div>}
+          <div className="form-group"><label>Nueva contraseña</label><input type="password" className="form-control" placeholder="Mínimo 6 caracteres" value={newPassword} onChange={e => setNewPassword(e.target.value)} minLength={6} required autoFocus /></div>
+          <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '12px' }} disabled={authLoading}>
+            {authLoading ? <RefreshCw size={16} className="spin" /> : 'Guardar contraseña'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+
+  if (!user && !loading && forgotMode) return (
+    <div className="auth-container">
+      <div className="auth-card">
+        <div className="auth-logo" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10 }}><Wallet size={28} /> Finanzas Pro</div>
+        <p className="auth-sub">Recupera tu contraseña</p>
+        {authError && <div className="auth-error">{authError}</div>}
+        {authInfo && <div className="auth-error" style={{ background: 'var(--green-bg)', color: 'var(--green)' }}>{authInfo}</div>}
+        <form onSubmit={handleForgot}>
+          <div className="form-group"><label>Correo electrónico</label><input type="email" className="form-control" placeholder="tu@correo.com" value={email} onChange={e => setEmail(e.target.value)} required /></div>
+          <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '12px' }} disabled={authLoading}>
+            {authLoading ? <RefreshCw size={16} className="spin" /> : (db.isDemo ? 'Continuar' : 'Enviar enlace')}
+          </button>
+        </form>
+        <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 10 }} onClick={() => { setForgotMode(false); setAuthError(''); setAuthInfo(''); }}>Volver a iniciar sesión</button>
+      </div>
+    </div>
+  );
+
   if (!user && !loading) return (
     <div className="auth-container">
       <div className="auth-card">
@@ -572,12 +692,14 @@ export default function Home() {
           <button className={`auth-tab ${!isLogin ? 'active' : ''}`} onClick={() => setIsLogin(false)}>Registrarse</button>
         </div>
         {authError && <div className="auth-error">{authError}</div>}
+        {authInfo && <div className="auth-error" style={{ background: 'var(--green-bg)', color: 'var(--green)' }}>{authInfo}</div>}
         <form onSubmit={handleAuth}>
           <div className="form-group"><label>Correo electrónico</label><input type="email" className="form-control" placeholder="tu@correo.com" value={email} onChange={e => setEmail(e.target.value)} required /></div>
           <div className="form-group"><label>Contraseña</label><input type="password" className="form-control" placeholder="••••••••" value={password} onChange={e => setPassword(e.target.value)} required /></div>
           <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '12px' }} disabled={authLoading}>
             {authLoading ? <RefreshCw size={16} className="spin" /> : (isLogin ? 'Entrar' : 'Crear cuenta')}
           </button>
+          {isLogin && <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8, fontSize: '0.82rem' }} onClick={() => { setForgotMode(true); setAuthError(''); setAuthInfo(''); }}>¿Olvidaste tu contraseña?</button>}
         </form>
       </div>
     </div>
@@ -594,6 +716,10 @@ export default function Home() {
       <header className="main-header">
         <div className="logo"><Wallet size={18} /><span className="logo-text">Finanzas Pro</span></div>
         <div className="nav-links">
+          <button className={`nav-link ${currentTab === 'cycle' ? 'active' : ''}`} onClick={() => setCurrentTab('cycle')}>
+            <Calendar size={14} />
+            <span>Mi ciclo</span>
+          </button>
           <button className={`nav-link ${currentTab === 'dashboard'   ? 'active' : ''}`} onClick={() => setCurrentTab('dashboard')}>
             <PieChart size={14} />
             <span>Dashboard</span>
@@ -627,6 +753,85 @@ export default function Home() {
       </header>
 
       <main className="dashboard-container">
+
+        {/* ══════════════════════════════
+            TAB: MI CICLO
+            ══════════════════════════════ */}
+        {currentTab === 'cycle' && (
+          <div className="cycle-page">
+            <div className="card cycle-hero">
+              <div className="cycle-hero-top">
+                <div>
+                  <div className="cycle-eyebrow">Ciclo actual</div>
+                  <div className="cycle-range">{cycleFmtDay(cycle.start)} → {cycleFmtDay(cycle.end)}</div>
+                </div>
+                <label className="cycle-payday">
+                  <span>Me pagan el día</span>
+                  <select className="form-control" value={cycleState.payDay} onChange={e => updateCycleState({ ...cycleState, payDay: parseInt(e.target.value) })}>
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                </label>
+              </div>
+
+              <div className="cycle-amount-label">Te queda ahora</div>
+              <div className={`cycle-amount ${cycleInHand >= 0 ? '' : 'neg'}`}>{fmt(cycleInHand)}</div>
+              <div className="cycle-hint">
+                {cycle.daysLeft === 1 ? 'Mañana' : `En ${cycle.daysLeft} días`} te pagan ({cycleFmtDay(cycle.nextPay)}) ·
+                {' '}{cycleLeftover >= 0 ? <>sobrarán <strong>{fmt(cycleLeftover)}</strong> al pagar todo</> : <>faltarán <strong>{fmt(-cycleLeftover)}</strong> para cubrir todo</>}
+              </div>
+
+              <div className="cycle-progress"><div style={{ width: `${cycleTotal ? (cyclePaidTotal / cycleTotal) * 100 : 0}%` }} /></div>
+              <div className="cycle-progress-legend">
+                <span>Pagado <strong>{fmt(cyclePaidTotal)}</strong></span>
+                <span>Pendiente <strong>{fmt(cyclePending)}</strong></span>
+              </div>
+            </div>
+
+            {totalIncomes === 0 && (
+              <div className="card cycle-note"><Info size={15} /> Aún no has registrado ingresos. Agrégalos en el Dashboard para ver cuánto te queda.</div>
+            )}
+
+            {([
+              { title: 'Cuotas de deudas', icon: <CreditCard size={16} />, items: cycleItems.debts, empty: 'No tienes cuotas en este ciclo' },
+              { title: 'Egresos fijos',    icon: <Receipt size={16} />,    items: cycleItems.expenses, empty: 'No tienes egresos fijos' },
+            ]).map(section => (
+              <div className="card" key={section.title}>
+                <div className="section-header">
+                  <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 7 }}>{section.icon}{section.title}</div>
+                  <span className="cycle-count">{section.items.filter(i => i.paid).length}/{section.items.length} pagados</span>
+                </div>
+                {section.items.length === 0 ? (
+                  <div className="empty-state"><div className="empty-state-text">{section.empty}</div></div>
+                ) : (
+                  <div className="cycle-list">
+                    {section.items.map(item => {
+                      const late = !item.paid && item.daysToDue !== null && item.daysToDue < 0;
+                      const soon = !item.paid && item.daysToDue !== null && item.daysToDue >= 0 && item.daysToDue <= 3;
+                      return (
+                        <button key={item.kind + item.id} className={`cycle-item ${item.paid ? 'paid' : ''}`}
+                          onClick={() => item.kind === 'debt' ? toggleCycleDebt(item.debt!) : toggleCycleExpense(item.id)}
+                          aria-pressed={item.paid} title={item.paid ? 'Desmarcar pago' : 'Marcar como pagado'}>
+                          <span className="cycle-check">{item.paid ? <CheckCircle2 size={22} /> : <Circle size={22} />}</span>
+                          <span className="cycle-item-main">
+                            <span className="cycle-item-name">{item.name}</span>
+                            <span className="cycle-item-sub">
+                              {item.sub}
+                              {item.due && !item.paid && <span className={`cycle-due ${late ? 'late' : soon ? 'soon' : ''}`}>
+                                {late ? 'Vencida' : item.daysToDue === 0 ? 'Vence hoy' : `Vence ${cycleFmtDay(item.due)}`}
+                              </span>}
+                            </span>
+                          </span>
+                          <span className="cycle-item-amount">{fmt(item.amount)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            ))}
+            <p className="cycle-footnote">Al marcar una cuota de deuda como pagada se suma a las cuotas pagadas de esa deuda; si te equivocas, desmárcala y se revierte. Los egresos fijos se reinician cada ciclo.</p>
+          </div>
+        )}
 
         {/* ══════════════════════════════
             TAB: DASHBOARD

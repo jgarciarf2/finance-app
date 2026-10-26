@@ -199,6 +199,40 @@ export const db = {
       }
     },
 
+    /** Envía el correo de recuperación (Supabase). En modo demo no hay correo: se restablece en el momento. */
+    async requestPasswordReset(email: string) {
+      if (useSupabase && supabase) {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
+        });
+        if (error) throw error;
+      } else {
+        const users = getLocalData('mock_users');
+        if (!users.find(u => u.email === email)) throw new Error('No existe una cuenta con ese correo.');
+      }
+    },
+
+    /** Define la nueva contraseña. Supabase: usuario con sesión de recuperación. Demo: se indica el correo. */
+    async updatePassword(newPassword: string, email?: string) {
+      if (useSupabase && supabase) {
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) throw error;
+      } else {
+        const users = getLocalData('mock_users');
+        const user = users.find(u => u.email === email);
+        if (!user) throw new Error('No existe una cuenta con ese correo.');
+        user.password = newPassword;
+        setLocalData('mock_users', users);
+      }
+    },
+
+    /** Escucha el evento de Supabase al abrir el enlace del correo de recuperación. */
+    onPasswordRecovery(callback: () => void) {
+      if (!(useSupabase && supabase)) return () => {};
+      const { data } = supabase.auth.onAuthStateChange(event => { if (event === 'PASSWORD_RECOVERY') callback(); });
+      return () => data.subscription.unsubscribe();
+    },
+
     async getCurrentUser() {
       if (typeof window === 'undefined') return null;
       if (useSupabase && supabase) {
