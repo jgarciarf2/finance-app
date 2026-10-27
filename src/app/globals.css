@@ -1966,3 +1966,32 @@ input:checked + .slider::before { transform: translateX(20px); background: #fff;
   .proj-debt-cell { text-align: left; }
   .proj-debt-cell span { display: block; }
 }
+
+/* =============================================
+   GRÁFICAS RESPONSIVAS
+   ============================================= */
+.dashboard-grid > *, .card { min-width: 0; }
+.dashboard-container { overflow-x: clip; }
+
+.donut { position: relative; flex-shrink: 0; }
+.donut-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none; }
+.donut-center span { font-size: 0.66rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; }
+.donut-center strong { font-size: 1.05rem; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.donut-wrap { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; justify-content: center; }
+.donut-legend { flex: 1; min-width: 200px; display: flex; flex-direction: column; }
+.donut-legend-row { display: grid; grid-template-columns: 1fr auto 42px; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--divider); font-size: 0.84rem; }
+.donut-legend-row:last-child { border-bottom: none; }
+.donut-legend-row .k { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); min-width: 0; }
+.donut-legend-row .k i { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+.donut-legend-row .v { font-weight: 600; font-variant-numeric: tabular-nums; }
+.donut-legend-row .p { text-align: right; color: var(--text-muted); font-size: 0.76rem; font-variant-numeric: tabular-nums; }
+
+.bc { overflow-x: auto; padding-bottom: 2px; }
+.bc-cols { display: flex; gap: 6px; min-width: 100%; width: max-content; }
+.bc-col { flex: 1 0 34px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.bc-bars { display: flex; align-items: flex-end; justify-content: center; gap: 3px; width: 100%;
+  border-bottom: 1px solid var(--border-strong);
+  background: repeating-linear-gradient(to top, var(--divider) 0, var(--divider) 1px, transparent 1px, transparent 25%); }
+.bc-bars i { flex: 1; max-width: 22px; min-width: 6px; border-radius: 4px 4px 0 0; transition: opacity 0.15s ease; }
+.bc-bars i:hover { opacity: 0.75; }
+.bc-label { font-size: 0.68rem; color: var(--text-muted); text-transform: capitalize; white-space: nowrap; }

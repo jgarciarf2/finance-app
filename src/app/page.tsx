@@ -33,77 +33,47 @@ function getBillingInfo(cutoff_day: number) {
   return { cutoffDate, payDeadline, daysUntilCutoff, daysUntilPay };
 }
 
-/* ── SVG: Donut Chart ────────────────────────────────────── */
-function DonutChart({ segments, size = 160, thickness = 26 }: {
+/* ── Gráficas responsivas ─────────────────────────────────── */
+function DonutChart({ segments, size = 168, thickness = 18, centerLabel, centerValue }: {
   segments: { label: string; value: number; color: string }[];
-  size?: number; thickness?: number;
+  size?: number; thickness?: number; centerLabel?: string; centerValue?: string;
 }) {
-  const total = segments.reduce((a, c) => a + c.value, 0);
-  if (total === 0) return <div style={{ width: size, height: size, borderRadius: '50%', background: 'var(--surface-inset)', flexShrink: 0 }} />;
-  const r = (size - thickness) / 2, cx = size / 2, cy = size / 2, C = 2 * Math.PI * r;
+  const total = segments.reduce((a, c) => a + Math.max(0, c.value), 0);
+  const r = (size - thickness) / 2, cx = size / 2, C = 2 * Math.PI * r;
+  const gap = total > 0 && segments.filter(s => s.value > 0).length > 1 ? 3 : 0;
   let cum = 0;
   return (
-    <svg width={size} height={size} style={{ flexShrink: 0 }}>
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--surface-inset)" strokeWidth={thickness} />
-      {segments.filter(s => s.value > 0).map((seg, i) => {
-        const dash = (seg.value / total) * C, offset = -(cum / total) * C;
-        cum += seg.value;
-        return <circle key={i} cx={cx} cy={cy} r={r} fill="none" stroke={seg.color} strokeWidth={thickness - 3}
-          strokeDasharray={`${dash} ${C - dash}`} strokeDashoffset={offset} transform={`rotate(-90 ${cx} ${cy})`} />;
-      })}
-    </svg>
+    <div className="donut" style={{ width: size, height: size }}>
+      <svg viewBox={`0 0 ${size} ${size}`} width="100%" height="100%" role="img" aria-label="Distribución mensual">
+        <circle cx={cx} cy={cx} r={r} fill="none" stroke="var(--surface-inset)" strokeWidth={thickness} />
+        {segments.filter(s => s.value > 0).map((seg, i) => {
+          const len = (seg.value / total) * C, offset = -cum;
+          cum += len;
+          return <circle key={i} cx={cx} cy={cx} r={r} fill="none" stroke={seg.color} strokeWidth={thickness}
+            strokeDasharray={`${Math.max(len - gap, 0)} ${C - Math.max(len - gap, 0)}`} strokeDashoffset={offset} transform={`rotate(-90 ${cx} ${cx})`} />;
+        })}
+      </svg>
+      {centerValue && <div className="donut-center"><span>{centerLabel}</span><strong>{centerValue}</strong></div>}
+    </div>
   );
 }
 
 function BarChart({ groups, height = 160 }: { groups: { label: string; bars: { value: number; color: string }[] }[]; height?: number }) {
   const maxVal = Math.max(...groups.flatMap(g => g.bars.map(b => b.value)), 1);
-  const barW = 16, gap = 6, groupW = (groups[0]?.bars.length ?? 1) * (barW + gap) - gap + 10;
-  const totalW = groups.length * (groupW + 14) + 10;
   return (
-    <div style={{ overflowX: 'auto', paddingBottom: 4 }}>
-      <svg width={totalW} height={height + 28}>
-        {groups.map((group, gi) => {
-          const groupX = 5 + gi * (groupW + 14);
-          return (
-            <g key={gi}>
-              {group.bars.map((bar, bi) => {
-                const bh = Math.max((bar.value / maxVal) * height, bar.value > 0 ? 3 : 0);
-                return <rect key={bi} x={groupX + bi * (barW + gap)} y={height - bh} width={barW} height={bh} fill={bar.color} rx={4} />;
-              })}
-              <text x={groupX + groupW / 2 - 8} y={height + 18} textAnchor="middle" fontSize={9} fill="var(--text-muted)">{group.label}</text>
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
-
-function LineAreaChart({ data, height = 160 }: { data: { label: string; value: number }[]; height?: number }) {
-  if (data.length < 2) return null;
-  const padL = 56, padR = 16, padT = 14, padB = 26;
-  const W = Math.max(data.length * 52 + padL + padR, 400);
-  const vals = data.map(d => d.value), minV = Math.min(...vals), maxV = Math.max(...vals), range = maxV - minV || 1;
-  const getX = (i: number) => padL + (i / (data.length - 1)) * (W - padL - padR);
-  const getY = (v: number) => padT + ((maxV - v) / range) * (height - padT - padB);
-  const zero = getY(0);
-  const linePts = data.map((d, i) => `${getX(i)},${getY(d.value)}`).join(' ');
-  const areaPts = [`${getX(0)},${Math.min(zero, height - padB)}`, ...data.map((d, i) => `${getX(i)},${getY(d.value)}`), `${getX(data.length - 1)},${Math.min(zero, height - padB)}`].join(' ');
-  const yLabels = [maxV, (maxV + minV) / 2, minV].map(v => ({ v, y: getY(v), label: fmt(v).replace('.000.000', 'M').replace('.000', 'k') }));
-  return (
-    <div style={{ overflowX: 'auto' }}>
-      <svg width={W} height={height} style={{ display: 'block' }}>
-        <defs>
-          <linearGradient id="ag" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="var(--green)" stopOpacity={0.25} /><stop offset="100%" stopColor="var(--green)" stopOpacity={0.02} /></linearGradient>
-        </defs>
-        {yLabels.map((yl, i) => <line key={i} x1={padL} y1={yl.y} x2={W - padR} y2={yl.y} stroke="var(--border)" strokeWidth={1} strokeDasharray="4 4" />)}
-        {minV < 0 && maxV > 0 && <line x1={padL} y1={zero} x2={W - padR} y2={zero} stroke="var(--border)" strokeWidth={1.5} />}
-        <polygon points={areaPts} fill={minV >= 0 ? 'url(#ag)' : 'rgba(255,69,58,0.06)'} />
-        <polyline points={linePts} fill="none" stroke={minV >= 0 ? 'var(--green)' : 'var(--blue)'} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
-        {data.map((d, i) => <circle key={i} cx={getX(i)} cy={getY(d.value)} r={3.5} fill={d.value >= 0 ? 'var(--green)' : 'var(--red)'} stroke="var(--surface)" strokeWidth={2} />)}
-        {data.map((d, i) => i % 2 === 0 && <text key={i} x={getX(i)} y={height - 6} textAnchor="middle" fontSize={8.5} fill="var(--text-muted)">{d.label}</text>)}
-        {yLabels.map((yl, i) => <text key={i} x={padL - 6} y={yl.y + 4} textAnchor="end" fontSize={8} fill="var(--text-muted)">{yl.label}</text>)}
-      </svg>
+    <div className="bc">
+      <div className="bc-cols">
+        {groups.map((g, gi) => (
+          <div key={gi} className="bc-col">
+            <div className="bc-bars" style={{ height }}>
+              {g.bars.map((b, bi) => (
+                <i key={bi} title={`${g.label}: ${fmt(b.value)}`} style={{ height: `${b.value > 0 ? Math.max((b.value / maxVal) * 100, 2) : 0}%`, background: b.color }} />
+              ))}
+            </div>
+            <span className="bc-label">{g.label}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -664,8 +634,7 @@ export default function Home() {
     { label: 'Cuotas deuda',  value: totalDebtQuota,     color: 'var(--orange)' },
     { label: 'Disponible',    value: Math.max(0, freeCashFlow), color: 'var(--green)' },
   ];
-  const barChartGroups = projections.slice(0, 8).map(p => ({ label: p.short, bars: [{ value: p.incomes, color: 'var(--green)' }, { value: p.fixedExpenses, color: 'var(--red)' }, { value: p.debtsQuota, color: 'var(--orange)' }] }));
-  const lineChartData  = projections.slice(0, 18).map(p => ({ label: p.short, value: p.cashFlow }));
+  const barChartGroups = projections.slice(0, 12).map(p => ({ label: p.short, bars: [{ value: p.debtsQuota, color: 'var(--orange)' }] }));
   const expenseCategoryTotals = fixedExpenses.reduce((acc, exp) => { acc[exp.category] = (acc[exp.category] || 0) + exp.amount; return acc; }, {} as Record<string, number>);
   const categoryColors: Record<string, string> = { Vivienda: 'var(--blue)', Servicios: 'var(--purple)', Alimentación: 'var(--orange)', Transporte: 'var(--green)', Suscripciones: 'var(--red)', Salud: '#ec4899', Educación: '#06b6d4', Otros: 'var(--text-muted)' };
 
@@ -1164,17 +1133,15 @@ export default function Home() {
               {/* ─── RIGHT COLUMN ─── */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                 <div className="card">
-                  <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 20 }}><PieChart size={16} /> Distribución mensual</div>
-                  <div style={{ display: 'flex', gap: 20, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <DonutChart segments={donutSegments} size={140} thickness={26} />
-                    <div style={{ flex: 1, minWidth: 120, display: 'flex', flexDirection: 'column', gap: 10 }}>
-                      {donutSegments.map((s, i) => (
-                        <div key={i}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', marginBottom: 4 }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span style={{ width: 8, height: 8, borderRadius: '50%', background: s.color, display: 'inline-block', flexShrink: 0 }} /><span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{s.label}</span></span>
-                            <span style={{ fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>{fmt(s.value)}</span>
-                          </div>
-                          <HBar value={s.value} max={totalIncomes} color={s.color} />
+                  <div className="section-title" style={{ marginBottom: 18 }}>Distribución mensual</div>
+                  <div className="donut-wrap">
+                    <DonutChart segments={donutSegments} centerLabel="Ingresos" centerValue={fmt(totalIncomes)} />
+                    <div className="donut-legend">
+                      {donutSegments.map((seg, i) => (
+                        <div key={i} className="donut-legend-row">
+                          <span className="k"><i style={{ background: seg.color }} />{seg.label}</span>
+                          <span className="v">{fmt(seg.value)}</span>
+                          <span className="p">{totalIncomes > 0 ? ((seg.value / totalIncomes) * 100).toFixed(0) : 0}%</span>
                         </div>
                       ))}
                     </div>
@@ -1206,12 +1173,8 @@ export default function Home() {
 
                 {projections.length > 0 && (
                   <div className="card">
-                    <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 6 }}><BarChart2 size={16} /> Proyección próximos meses</div>
-                    <div style={{ display: 'flex', gap: 12, marginBottom: 14, flexWrap: 'wrap' }}>
-                      {[['var(--green)', 'Ingresos'], ['var(--red)', 'Egresos'], ['var(--orange)', 'Cuotas']].map(([c, l], i) => (
-                        <span key={i} style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.72rem', color: 'var(--text-secondary)' }}><span style={{ width: 8, height: 8, borderRadius: 2, background: c, display: 'inline-block' }} />{l}</span>
-                      ))}
-                    </div>
+                    <div className="section-title" style={{ marginBottom: 4 }}>Cuotas próximos meses</div>
+                    <div className="section-subtitle" style={{ marginBottom: 14 }}>Total a pagar de deudas por mes</div>
                     <BarChart groups={barChartGroups} height={140} />
                   </div>
                 )}
