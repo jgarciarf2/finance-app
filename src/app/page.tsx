@@ -414,6 +414,20 @@ export default function Home() {
     } catch (err: any) { alert('No se pudo actualizar el pago: ' + err.message); }
   };
 
+  const setGroupPaid = async (items: { kind: 'debt' | 'expense'; id: string; debt: Debt | null; paid: boolean }[], pay: boolean) => {
+    const targets = items.filter(i => i.paid !== pay);
+    if (targets.length === 0) return;
+    try {
+      for (const t of targets) if (t.kind === 'debt' && t.debt) await db.debts.updateInstallments(t.id, t.debt.installments_paid + (pay ? 1 : -1));
+      const ids = (kind: 'debt' | 'expense', current: string[]) => {
+        const changed = targets.filter(t => t.kind === kind).map(t => t.id);
+        return pay ? [...new Set([...current, ...changed])] : current.filter(id => !changed.includes(id));
+      };
+      setCyclePaid({ debts: ids('debt', cyclePaid.debts), expenses: ids('expense', cyclePaid.expenses) });
+      fetchAll(spaceId, user?.id);
+    } catch (err: any) { alert('No se pudo actualizar el pago: ' + err.message); }
+  };
+
   const toggleCycleExpense = (id: string) =>
     setCyclePaid({ ...cyclePaid, expenses: cyclePaid.expenses.includes(id) ? cyclePaid.expenses.filter(e => e !== id) : [...cyclePaid.expenses, id] });
 
@@ -519,7 +533,7 @@ export default function Home() {
     if (done) return { ...debt, currentInterest: 0, currentQuota: 0, currentCapital: 0, remainingBalance: 0, isCompleted: true };
     const remaining = debt.total_capital - debt.installments_paid * debt.fixed_capital_payment;
     const interest  = debt.has_interest ? remaining * (debt.monthly_interest_rate / 100) : 0;
-    return { ...debt, currentInterest: interest, currentCapital: debt.fixed_capital_payment, currentQuota: debt.fixed_capital_payment + interest, remainingBalance: remaining - debt.fixed_capital_payment, isCompleted: false };
+    return { ...debt, currentInterest: interest, currentCapital: debt.fixed_capital_payment, currentQuota: debt.fixed_capital_payment + interest, remainingBalance: Math.max(0, Math.round(remaining - debt.fixed_capital_payment)), isCompleted: false };
   });
 
   const totalDebtQuota     = activeDebtsDetails.filter(d => !d.isCompleted).reduce((a, d) => a + d.currentQuota, 0);
@@ -556,6 +570,18 @@ export default function Home() {
   const cyclePending    = cycleTotal - cyclePaidTotal;
   const cycleInHand     = totalIncomes - cyclePaidTotal;       // lo que te queda ahora mismo
   const cycleLeftover   = totalIncomes - cycleTotal;           // lo que sobra cuando pagues todo
+  const cycleSections = (() => {
+    const groups = new Map<string, { key: string; title: string; sub: string; items: typeof cycleItems.debts }>();
+    cycleItems.debts.forEach(item => {
+      const card = cards.find(c => c.id === item.debt!.card_id);
+      const key = card?.id || '_none';
+      if (!groups.has(key)) groups.set(key, { key, title: card ? card.name : 'Sin tarjeta', sub: card ? `Corte día ${card.cutoff_day}` : 'Pagos directos', items: [] });
+      groups.get(key)!.items.push(item);
+    });
+    const list = [...groups.values()];
+    if (cycleItems.expenses.length) list.push({ key: '_fixed', title: 'Egresos fijos', sub: 'Gastos recurrentes', items: cycleItems.expenses as unknown as typeof cycleItems.debts });
+    return list;
+  })();
   const cycleFmtDay     = (d: Date) => d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
 
   /* ── Billing summary ─────────────────────────────────────── */
@@ -792,18 +818,23 @@ export default function Home() {
               <div className="card cycle-note"><Info size={15} /> Aún no has registrado ingresos. Agrégalos en el Dashboard para ver cuánto te queda.</div>
             )}
 
-            {([
-              { title: 'Cuotas de deudas', icon: <CreditCard size={16} />, items: cycleItems.debts, empty: 'No tienes cuotas en este ciclo' },
-              { title: 'Egresos fijos',    icon: <Receipt size={16} />,    items: cycleItems.expenses, empty: 'No tienes egresos fijos' },
-            ]).map(section => (
-              <div className="card" key={section.title}>
-                <div className="section-header">
-                  <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 7 }}>{section.icon}{section.title}</div>
-                  <span className="cycle-count">{section.items.filter(i => i.paid).length}/{section.items.length} pagados</span>
-                </div>
-                {section.items.length === 0 ? (
-                  <div className="empty-state"><div className="empty-state-text">{section.empty}</div></div>
-                ) : (
+            {cycleSections.length === 0 && <div className="card"><div className="empty-state"><div className="empty-state-text">No tienes cuotas ni egresos en este ciclo</div></div></div>}
+            {cycleSections.map(section => {
+              const done = section.items.filter(i => i.paid).length;
+              const allPaid = done === section.items.length;
+              const total = section.items.reduce((a, i) => a + i.amount, 0);
+              const pending = section.items.filter(i => !i.paid).reduce((a, i) => a + i.amount, 0);
+              return (
+                <div className="card cycle-group" key={section.key}>
+                  <div className="cycle-group-head">
+                    <div style={{ minWidth: 0 }}>
+                      <div className="section-title">{section.title}</div>
+                      <div className="section-subtitle">{section.sub} · {done}/{section.items.length} pagados · {fmt(total)}</div>
+                    </div>
+                    <button className={`btn btn-sm ${allPaid ? 'btn-secondary' : 'btn-primary'}`} onClick={() => setGroupPaid(section.items, !allPaid)}>
+                      {allPaid ? 'Deshacer' : `Pagar todo · ${fmt(pending)}`}
+                    </button>
+                  </div>
                   <div className="cycle-list">
                     {section.items.map(item => {
                       const late = !item.paid && item.daysToDue !== null && item.daysToDue < 0;
@@ -812,11 +843,11 @@ export default function Home() {
                         <button key={item.kind + item.id} className={`cycle-item ${item.paid ? 'paid' : ''}`}
                           onClick={() => item.kind === 'debt' ? toggleCycleDebt(item.debt!) : toggleCycleExpense(item.id)}
                           aria-pressed={item.paid} title={item.paid ? 'Desmarcar pago' : 'Marcar como pagado'}>
-                          <span className="cycle-check">{item.paid ? <CheckCircle2 size={22} /> : <Circle size={22} />}</span>
+                          <span className="cycle-check">{item.paid ? <CheckCircle2 size={20} /> : <Circle size={20} />}</span>
                           <span className="cycle-item-main">
                             <span className="cycle-item-name">{item.name}</span>
                             <span className="cycle-item-sub">
-                              {item.sub}
+                              {item.kind === 'debt' ? item.sub.split(' · ')[0] : item.sub}
                               {item.due && !item.paid && <span className={`cycle-due ${late ? 'late' : soon ? 'soon' : ''}`}>
                                 {late ? 'Vencida' : item.daysToDue === 0 ? 'Vence hoy' : `Vence ${cycleFmtDay(item.due)}`}
                               </span>}
@@ -827,10 +858,10 @@ export default function Home() {
                       );
                     })}
                   </div>
-                )}
-              </div>
-            ))}
-            <p className="cycle-footnote">Al marcar una cuota de deuda como pagada se suma a las cuotas pagadas de esa deuda; si te equivocas, desmárcala y se revierte. Los egresos fijos se reinician cada ciclo.</p>
+                </div>
+              );
+            })}
+            <p className="cycle-footnote">Con «Pagar todo» marcas de una vez todas las cuotas de esa tarjeta (cada deuda suma una cuota pagada). Puedes deshacerlo, o tocar una fila para marcar solo esa. Los egresos fijos se reinician cada ciclo.</p>
           </div>
         )}
 
@@ -1066,10 +1097,10 @@ export default function Home() {
                           <thead>
                             <tr>
                               <th>Deuda</th>
-                              <th>Cuota</th>
+                              <th style={{ whiteSpace: 'nowrap' }}>Cuota</th>
                               <th>Tarjeta / Corte</th>
                               <th className="text-right">Valor cuota</th>
-                              <th className="text-right">Saldo restante</th>
+                              <th className="text-right" style={{ whiteSpace: 'nowrap' }}>Restante después</th>
                               <th></th>
                             </tr>
                           </thead>
@@ -1079,7 +1110,7 @@ export default function Home() {
                               return (
                                 <tr key={debt.id} className={debt.isCompleted ? 'paid' : ''} style={{ opacity: debt.isCompleted ? 0.6 : 1 }}>
                                   <td style={{ fontWeight: 600 }}>{debt.name}</td>
-                                  <td>{debt.isCompleted ? 'Pagada' : `Cuota #${debt.installments_paid + 1} de ${debt.total_installments}`}</td>
+                                  <td style={{ whiteSpace: 'nowrap' }}>{debt.isCompleted ? 'Pagada' : <>Cuota <strong>{debt.installments_paid + 1}</strong> de {debt.total_installments}</>}</td>
                                   <td>
                                     {linkedCard ? linkedCard.name : 'Manual'} 
                                     {debt.cutoff_day ? ` · Corte día ${debt.cutoff_day}` : ''}
@@ -1209,8 +1240,8 @@ export default function Home() {
               {[
                 { label: 'Meses proyectados', value: String(projections.length), sub: 'Hasta el fin de tus deudas', dot: 'var(--blue)' },
                 { label: 'Libre de deudas',   value: debtFreeDate ? debtFreeDate.replace(/^./, c => c.toUpperCase()) : (debts.length === 0 ? 'Ya eres libre' : '—'), sub: 'Última cuota proyectada', dot: 'var(--green)' },
-                { label: 'Flujo promedio',    value: fmt(projections.reduce((a, p) => a + p.cashFlow, 0) / (projections.length || 1)), sub: 'Por mes proyectado', dot: 'var(--purple)' },
-                { label: 'Interés restante',  value: fmt(totalInterestRemaining), sub: 'Hasta saldar deudas', dot: 'var(--orange)' },
+                { label: 'Total por pagar',   value: fmt(projections.reduce((a, p) => a + p.debtsQuota, 0)), sub: 'Suma de todas las cuotas', dot: 'var(--orange)' },
+                { label: 'Interés restante',  value: fmt(totalInterestRemaining), sub: 'Incluido en ese total', dot: 'var(--red)' },
               ].map((k, i) => (
                 <div key={i} className="kpi">
                   <div className="kpi-label"><i style={{ background: k.dot }} />{k.label}</div>
@@ -1220,55 +1251,43 @@ export default function Home() {
               ))}
             </div>
 
-            {lineChartData.length > 1 && (
-              <div className="card">
-                <div className="section-title" style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 16 }}><Activity size={16} /> Tendencia de flujo de caja libre</div>
-                <LineAreaChart data={lineChartData} height={170} />
-              </div>
-            )}
+            <div className="card">
+              <div className="section-title" style={{ marginBottom: 4 }}>Cuotas por mes</div>
+              <div className="section-subtitle" style={{ marginBottom: 14 }}>Total a pagar de deudas en los próximos meses</div>
+              <BarChart groups={projections.slice(0, 14).map(p => ({ label: p.short, bars: [{ value: p.debtsQuota, color: 'var(--orange)' }] }))} height={140} />
+            </div>
 
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
               <div style={{ padding: '18px 20px 12px' }}>
-                <div className="section-title">Detalle mensual</div>
-                <div className="section-subtitle">Toca un mes para ver ingresos, egresos y cuotas</div>
+                <div className="section-title">Deuda mes a mes</div>
+                <div className="section-subtitle">Toca un mes para ver cada cuota y lo que queda por pagar</div>
               </div>
-              <div className="proj-head">
-                <span>Mes</span><span>Ingresos</span><span>Egresos</span><span>Cuotas</span><span>Flujo libre</span><span />
+              <div className="proj-head proj-head-debt">
+                <span>Mes</span><span>Cuotas</span><span>Total a pagar</span><span>Restante después</span><span />
               </div>
               {projections.map((proj, i) => {
                 const open = expandedMonth === i;
+                const remainingAfter = proj.debtItems.reduce((a, d) => a + d.remainingBalance, 0);
                 return (
                   <div key={i} className={`proj-row ${open ? 'open' : ''}`}>
-                    <button className="proj-row-main" onClick={() => setExpandedMonth(open ? null : i)} aria-expanded={open}>
+                    <button className="proj-row-main proj-row-debt" onClick={() => setExpandedMonth(open ? null : i)} aria-expanded={open}>
                       <span className="proj-month">{proj.label}{proj.isDebtFree && <span className="tag-free">Sin deudas</span>}</span>
-                      <span className="proj-num proj-opt">{fmt(proj.incomes)}</span>
-                      <span className="proj-num proj-opt">{fmt(proj.fixedExpenses)}</span>
-                      <span className="proj-num proj-opt">{fmt(proj.debtsQuota)}</span>
-                      <span className={`proj-num flow ${proj.cashFlow < 0 ? 'neg' : ''}`}>{proj.cashFlow < 0 && '−'}{fmt(Math.abs(proj.cashFlow))}</span>
+                      <span className="proj-num proj-opt">{proj.debtItems.length} {proj.debtItems.length === 1 ? 'cuota' : 'cuotas'}</span>
+                      <span className="proj-num flow">{fmt(proj.debtsQuota)}</span>
+                      <span className="proj-num proj-opt">{fmt(remainingAfter)}</span>
                       <span className="proj-chev"><ChevronRight size={16} /></span>
                     </button>
                     {open && (
-                      <div className="proj-detail">
-                        <div>
-                          <h4>Ingresos · {fmt(proj.incomes)}</h4>
-                          {incomes.length === 0 ? <div className="proj-line">Sin ingresos</div> : incomes.map(inc => <div key={inc.id} className="proj-line"><span>{inc.name}</span><b>{fmt(inc.amount)}</b></div>)}
-                        </div>
-                        <div>
-                          <h4>Egresos fijos · {fmt(proj.fixedExpenses)}</h4>
-                          {fixedExpenses.length === 0 ? <div className="proj-line">Sin egresos</div> : fixedExpenses.map(exp => <div key={exp.id} className="proj-line"><span>{exp.name}</span><b>{fmt(exp.amount)}</b></div>)}
-                        </div>
-                        <div>
-                          <h4>Cuotas de deuda · {fmt(proj.debtsQuota)}</h4>
-                          {proj.debtItems.length === 0 ? <div className="proj-line">Sin cuotas este mes</div> : proj.debtItems.map((debt, idx) => (
-                            <div key={idx} className="proj-line">
-                              <span>
-                                {debt.name} <span style={{ color: 'var(--text-muted)' }}>({debt.currentInstallment}/{debt.totalInstallments})</span>
-                                <div className="proj-debt-meta">Abonado {fmt(debt.paidCapital)} · Restante {fmt(debt.remainingBalance)}</div>
-                              </span>
-                              <b>{fmt(debt.quota)}</b>
-                            </div>
-                          ))}
-                        </div>
+                      <div className="proj-detail proj-detail-debt">
+                        {proj.debtItems.length === 0 ? <div className="proj-line">Sin cuotas este mes</div> : proj.debtItems.map((debt, idx) => (
+                          <div key={idx} className="proj-debt-row">
+                            <div className="proj-debt-name">{debt.name}</div>
+                            <div className="proj-debt-cell"><span>Cuota</span><b>{debt.currentInstallment} de {debt.totalInstallments}</b></div>
+                            <div className="proj-debt-cell"><span>A pagar</span><b>{fmt(debt.quota)}</b></div>
+                            <div className="proj-debt-cell"><span>Restante después</span><b>{fmt(debt.remainingBalance)}</b></div>
+                          </div>
+                        ))}
+                        <div className="proj-debt-total"><span>Total del mes</span><b>{fmt(proj.debtsQuota)}</b></div>
                       </div>
                     )}
                   </div>
