@@ -1924,7 +1924,7 @@ input:checked + .slider::before { transform: translateX(20px); background: #fff;
 .proj-row:last-child { border-bottom: none; }
 .proj-row-main { width: 100%; padding: 14px 16px; background: none; border: none; cursor: pointer; font-family: var(--font); color: var(--text-primary); text-align: left; font-size: 0.86rem; }
 .proj-row-main:hover { background: var(--surface-inset); }
-.proj-month { font-weight: 600; text-transform: capitalize; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.proj-month { font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .proj-num { font-variant-numeric: tabular-nums; color: var(--text-secondary); }
 .proj-num.flow { font-weight: 650; color: var(--text-primary); }
 .proj-num.flow.neg { color: var(--red); }
@@ -1951,9 +1951,9 @@ input:checked + .slider::before { transform: translateX(20px); background: #fff;
 .cycle-group-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
 
 /* Proyecciones de deuda */
-.proj-head-debt, .proj-row-debt { grid-template-columns: 1.4fr 0.8fr 1fr 1.1fr 24px; }
+.proj-head-debt, .proj-row-debt { grid-template-columns: 1.4fr 0.7fr 1fr 1fr 1.1fr 24px; }
 .proj-detail-debt { grid-template-columns: 1fr !important; gap: 0; padding-top: 0; }
-.proj-debt-row { display: grid; grid-template-columns: 1.4fr 0.8fr 1fr 1.1fr 24px; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px dashed var(--divider); font-size: 0.84rem; }
+.proj-debt-row { display: grid; grid-template-columns: 1.4fr 0.7fr 1fr 1fr 1.1fr 24px; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px dashed var(--divider); font-size: 0.84rem; }
 .proj-debt-name { font-weight: 600; min-width: 0; }
 .proj-debt-cell { display: flex; flex-direction: column; text-align: right; gap: 1px; }
 .proj-debt-cell span { display: none; font-size: 0.66rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
@@ -1995,3 +1995,7 @@ input:checked + .slider::before { transform: translateX(20px); background: #fff;
 .bc-bars i { flex: 1; max-width: 22px; min-width: 6px; border-radius: 4px 4px 0 0; transition: opacity 0.15s ease; }
 .bc-bars i:hover { opacity: 0.75; }
 .bc-label { font-size: 0.68rem; color: var(--text-muted); text-transform: capitalize; white-space: nowrap; }
+
+.proj-debt-total.sub { font-weight: 500; color: var(--text-secondary); padding-top: 6px; font-size: 0.82rem; }
+.proj-debt-row > .proj-debt-cell:nth-child(4) { grid-column: 5; }
+@media (max-width: 759px) { .proj-debt-row > .proj-debt-cell:nth-child(4) { grid-column: auto; } }

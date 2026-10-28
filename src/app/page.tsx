@@ -586,26 +586,19 @@ export default function Home() {
 
   /* ── Projections ─────────────────────────────────────────── */
   const projections = useMemo(() => {
-    const now = new Date(), todayDay = now.getDate();
-    const debtEndMonths = debts.map(debt => {
-      let offset = 0;
-      if (debt.cutoff_day) { if (new Date(debt.start_date).getDate() > debt.cutoff_day) offset++; if (todayDay > debt.cutoff_day) offset++; }
-      return debt.total_installments - debt.installments_paid + offset;
-    });
-    const maxMonths = Math.max(12, ...debtEndMonths, 1);
+    // Mes 0 = la cuota que toca pagar ahora (installments_paid + 1), igual que el Dashboard.
+    const now = new Date();
+    const maxMonths = Math.max(12, ...debts.map(d => d.total_installments - d.installments_paid), 1);
+    let accumulated = 0;
     return Array.from({ length: maxMonths }, (_, i) => {
       const simDate = new Date(now.getFullYear(), now.getMonth() + i, 1);
       let simDebtsQuota = 0;
       const simDebts = debts.map(debt => {
-        const start = new Date(debt.start_date);
-        let offset = 0;
-        if (debt.cutoff_day) { if (start.getDate() > debt.cutoff_day) offset++; if (i === 0 && todayDay > debt.cutoff_day) offset++; }
-        const adjStart   = new Date(start.getFullYear(), start.getMonth() + offset, 1);
-        const diffMonths = (simDate.getFullYear() - adjStart.getFullYear()) * 12 + simDate.getMonth() - adjStart.getMonth();
-        if (diffMonths < 0 || diffMonths >= debt.total_installments) {
+        const n = debt.installments_paid + 1 + i; // número de cuota de este mes
+        if (n > debt.total_installments) {
           return { name: debt.name, quota: 0, payment_day: debt.payment_day, totalCapital: 0, paidCapital: 0, remainingBalance: 0, currentInstallment: 0, totalInstallments: 0 };
         }
-        const remainBefore = debt.total_capital - diffMonths * debt.fixed_capital_payment;
+        const remainBefore = debt.total_capital - (n - 1) * debt.fixed_capital_payment;
         const interest     = debt.has_interest ? remainBefore * (debt.monthly_interest_rate / 100) : 0;
         const quota        = debt.fixed_capital_payment + interest;
         simDebtsQuota += quota;
@@ -614,14 +607,15 @@ export default function Home() {
           quota,
           payment_day: debt.payment_day,
           totalCapital: debt.total_capital,
-          paidCapital: (diffMonths + 1) * debt.fixed_capital_payment,
-          remainingBalance: Math.max(0, debt.total_capital - (diffMonths + 1) * debt.fixed_capital_payment),
-          currentInstallment: diffMonths + 1,
+          paidCapital: n * debt.fixed_capital_payment,
+          remainingBalance: Math.max(0, Math.round(debt.total_capital - n * debt.fixed_capital_payment)),
+          currentInstallment: n,
           totalInstallments: debt.total_installments
         };
       });
+      accumulated += simDebtsQuota;
       const cashFlow = totalIncomes - totalFixedExpenses - simDebtsQuota;
-      return { date: simDate, label: monthLong(simDate), short: monthShort(simDate), incomes: totalIncomes, fixedExpenses: totalFixedExpenses, debtsQuota: simDebtsQuota, cashFlow, debtItems: simDebts.filter(d => d.quota > 0), isDebtFree: simDebtsQuota === 0 };
+      return { date: simDate, label: monthLong(simDate), short: monthShort(simDate), incomes: totalIncomes, fixedExpenses: totalFixedExpenses, debtsQuota: simDebtsQuota, accumulated, cashFlow, debtItems: simDebts.filter(d => d.quota > 0), isDebtFree: simDebtsQuota === 0 };
     });
   }, [debts, totalIncomes, totalFixedExpenses]);
 
@@ -1226,7 +1220,7 @@ export default function Home() {
                 <div className="section-subtitle">Toca un mes para ver cada cuota y lo que queda por pagar</div>
               </div>
               <div className="proj-head proj-head-debt">
-                <span>Mes</span><span>Cuotas</span><span>Total a pagar</span><span>Restante después</span><span />
+                <span>Mes</span><span>Cuotas</span><span>Total a pagar</span><span>Total a la fecha</span><span>Restante después</span><span />
               </div>
               {projections.map((proj, i) => {
                 const open = expandedMonth === i;
@@ -1234,9 +1228,10 @@ export default function Home() {
                 return (
                   <div key={i} className={`proj-row ${open ? 'open' : ''}`}>
                     <button className="proj-row-main proj-row-debt" onClick={() => setExpandedMonth(open ? null : i)} aria-expanded={open}>
-                      <span className="proj-month">{proj.label}{proj.isDebtFree && <span className="tag-free">Sin deudas</span>}</span>
+                      <span className="proj-month">{proj.label.replace(/^./, c => c.toUpperCase()).replace(' De ', ' de ')}{proj.isDebtFree && <span className="tag-free">Sin deudas</span>}</span>
                       <span className="proj-num proj-opt">{proj.debtItems.length} {proj.debtItems.length === 1 ? 'cuota' : 'cuotas'}</span>
                       <span className="proj-num flow">{fmt(proj.debtsQuota)}</span>
+                      <span className="proj-num proj-opt">{fmt(proj.accumulated)}</span>
                       <span className="proj-num proj-opt">{fmt(remainingAfter)}</span>
                       <span className="proj-chev"><ChevronRight size={16} /></span>
                     </button>
@@ -1251,6 +1246,7 @@ export default function Home() {
                           </div>
                         ))}
                         <div className="proj-debt-total"><span>Total del mes</span><b>{fmt(proj.debtsQuota)}</b></div>
+                        <div className="proj-debt-total sub"><span>Total a la fecha (acumulado)</span><b>{fmt(proj.accumulated)}</b></div>
                       </div>
                     )}
                   </div>
