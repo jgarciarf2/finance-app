@@ -2143,3 +2143,37 @@ body { background: var(--bg) var(--glow) no-repeat; background-attachment: fixed
   .nav-links { background: rgba(255,255,255,0.92); }
   [data-theme="dark"] .nav-links { background: rgba(28,28,30,0.94); }
 }
+
+/* Negro puro (tema oscuro): grises neutros, sin tinte ni resplandor */
+[data-theme="dark"] {
+  --bg: #000000; --bg-secondary: #0a0a0a;
+  --surface: #0c0c0c; --surface-raised: #161616; --surface-inset: #161616;
+  --border: rgba(255,255,255,0.09); --border-strong: rgba(255,255,255,0.18); --divider: rgba(255,255,255,0.08);
+  --header-bg: rgba(0,0,0,0.72);
+  --modal-bg: #121212; --input-bg: #121212;
+  --glow: none;
+}
+[data-theme="dark"] body { background-image: none; }
+[data-theme="dark"] .hero { background: var(--surface); }
+[data-theme="dark"] .hero::before { display: none; }
+[data-theme="dark"] .nav-link.active { background: #2a2a2a; }
+@media (max-width: 639px) {
+  [data-theme="dark"] .nav-links { background: rgba(14,14,14,0.95); }
+}
+
+/* Colores vivos — paleta de sistema de Apple */
+:root {
+  --green: #34c759;  --green-bg: rgba(52,199,89,0.14);
+  --red: #ff3b30;    --red-bg: rgba(255,59,48,0.12);
+  --orange: #ff9500; --orange-bg: rgba(255,149,0,0.14);
+  --blue: #007aff;   --blue-bg: rgba(0,122,255,0.12);
+  --purple: #af52de; --purple-bg: rgba(175,82,222,0.12);
+}
+[data-theme="dark"] {
+  --green: #30d158;  --green-bg: rgba(48,209,88,0.16);
+  --red: #ff453a;    --red-bg: rgba(255,69,58,0.16);
+  --orange: #ff9f0a; --orange-bg: rgba(255,159,10,0.16);
+  --blue: #0a84ff;   --blue-bg: rgba(10,132,255,0.18);
+  --purple: #bf5af2; --purple-bg: rgba(191,90,242,0.18);
+}
+.bc-bars i { opacity: 1; }
