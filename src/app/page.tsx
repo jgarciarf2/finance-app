@@ -13,6 +13,7 @@ import {
 
 /* ── helpers ─────────────────────────────────────────────── */
 const fmt = (n: number) => '$' + Math.round(n).toLocaleString('es-CO');
+const payDayOf = (cutoff: number) => { const d = cutoff + 15; return d > 30 ? d - 30 : d; };
 const monthShort = (d: Date) => d.toLocaleString('es-ES', { month: 'short' });
 const monthLong  = (d: Date) => d.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
 const dateLabel  = (d: Date) => d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' });
@@ -33,13 +34,13 @@ function getBillingInfo(cutoff_day: number) {
 }
 
 /* ── Gráficas responsivas ─────────────────────────────────── */
-function DonutChart({ segments, size = 168, thickness = 18, centerLabel, centerValue }: {
+function DonutChart({ segments, size = 176, thickness = 14, centerLabel, centerValue }: {
   segments: { label: string; value: number; color: string }[];
   size?: number; thickness?: number; centerLabel?: string; centerValue?: string;
 }) {
   const total = segments.reduce((a, c) => a + Math.max(0, c.value), 0);
   const r = (size - thickness) / 2, cx = size / 2, C = 2 * Math.PI * r;
-  const gap = total > 0 && segments.filter(s => s.value > 0).length > 1 ? 3 : 0;
+  const gap = total > 0 && segments.filter(s => s.value > 0).length > 1 ? thickness + 4 : 0;
   let cum = 0;
   return (
     <div className="donut" style={{ width: size, height: size }}>
@@ -48,8 +49,9 @@ function DonutChart({ segments, size = 168, thickness = 18, centerLabel, centerV
         {segments.filter(s => s.value > 0).map((seg, i) => {
           const len = (seg.value / total) * C, offset = -cum;
           cum += len;
-          return <circle key={i} cx={cx} cy={cx} r={r} fill="none" stroke={seg.color} strokeWidth={thickness}
-            strokeDasharray={`${Math.max(len - gap, 0)} ${C - Math.max(len - gap, 0)}`} strokeDashoffset={offset} transform={`rotate(-90 ${cx} ${cx})`} />;
+          const visible = Math.max(len - gap, 0.1);
+          return <circle key={i} cx={cx} cy={cx} r={r} fill="none" stroke={seg.color} strokeWidth={thickness} strokeLinecap={gap ? 'round' : 'butt'}
+            strokeDasharray={`${visible} ${C - visible}`} strokeDashoffset={offset - gap / 2} transform={`rotate(-90 ${cx} ${cx})`} />;
         })}
       </svg>
       {centerValue && <div className="donut-center"><span>{centerLabel}</span><strong>{centerValue}</strong></div>}
@@ -135,7 +137,7 @@ const DebtFormFields = ({ form, setForm, cards }: {
         {selectedCard && (
           <div style={{ padding: '10px 14px', background: 'var(--blue-bg)', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', color: 'var(--blue)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <CheckCircle2 size={14} />
-            Corte: día {selectedCard.cutoff_day} · Pago límite: día {selectedCard.cutoff_day + 15}
+            Corte: día {selectedCard.cutoff_day} · Pago límite: día {payDayOf(selectedCard.cutoff_day)}
           </div>
         )}
       </div>
@@ -511,7 +513,7 @@ export default function Home() {
   const projections = useMemo(() => {
     // Mes 0 = la cuota que toca pagar ahora (installments_paid + 1), igual que el Dashboard.
     const now = new Date();
-    const maxMonths = Math.max(12, ...debts.map(d => d.total_installments - d.installments_paid), 1);
+    const maxMonths = Math.max(12, ...debts.map(d => d.total_installments - d.installments_paid + 1));
     return Array.from({ length: maxMonths }, (_, i) => {
       const simDate = new Date(now.getFullYear(), now.getMonth() + i, 1);
       let simDebtsQuota = 0;
@@ -920,7 +922,7 @@ export default function Home() {
                                   </td>
                                   <td className="text-right">
                                     {!debt.isCompleted && (
-                                      <button className="btn btn-success btn-sm" style={{ padding: '4px 10px', fontSize: '0.72rem' }} onClick={() => markInstallmentPaid(debt)}>Pagar cuota</button>
+                                      <button className="btn btn-success btn-sm" style={{ padding: '4px 10px', fontSize: '0.72rem' }} onClick={() => markInstallmentPaid(debt)}>Pagar</button>
                                     )}
                                   </td>
                                 </tr>
@@ -1126,7 +1128,7 @@ export default function Home() {
                         </div>
                         <div className="credit-card-info">
                           <div className="credit-card-info-row"><span className="credit-card-info-label">Día de corte</span><span className="credit-card-info-value">Día {card.cutoff_day}</span></div>
-                          <div className="credit-card-info-row"><span className="credit-card-info-label">Límite de pago</span><span className="credit-card-info-value">Día {card.cutoff_day + 15}</span></div>
+                          <div className="credit-card-info-row"><span className="credit-card-info-label">Límite de pago</span><span className="credit-card-info-value">Día {payDayOf(card.cutoff_day)}</span></div>
                           <div className="credit-card-info-row"><span className="credit-card-info-label">Próximo corte</span><span className="credit-card-info-value" style={{ color: 'var(--orange)' }}>{dateLabel(billing.cutoffDate)}</span></div>
                           <div className="credit-card-info-row"><span className="credit-card-info-label">Pagar antes del</span><span className="credit-card-info-value" style={{ color: 'var(--red)' }}>{dateLabel(billing.payDeadline)}</span></div>
                           <div className="credit-card-info-row"><span className="credit-card-info-label">Deudas vinculadas</span><span className="credit-card-info-value">{linkedDebts.length} activa{linkedDebts.length !== 1 ? 's' : ''}</span></div>
@@ -1570,7 +1572,7 @@ export default function Home() {
                             <div className="debt-billing-tags" style={{ padding: '6px 0 0' }}>
                               {linkedCard && <span className="billing-tag"><div className="credit-card-chip" style={{ width: 14, height: 10, display: 'inline-block', verticalAlign: 'middle', marginRight: 4 }} />{linkedCard.name}</span>}
                               {(debt.cutoff_day || linkedCard) && <span className="billing-tag"><Scissors size={10} /> Corte: día {linkedCard ? linkedCard.cutoff_day : debt.cutoff_day}</span>}
-                              {(debt.payment_day || linkedCard) && <span className="billing-tag"><Calendar size={10} /> Pago: día {linkedCard ? linkedCard.cutoff_day + 15 : debt.payment_day}</span>}
+                              {(debt.payment_day || linkedCard) && <span className="billing-tag"><Calendar size={10} /> Pago: día {linkedCard ? payDayOf(linkedCard.cutoff_day) : (debt.payment_day ? payDayOf(debt.payment_day - 15) : '')}</span>}
                             </div>
                           </div>
                           <span className={`debt-status ${debt.isCompleted ? 'done' : 'active'}`}>
