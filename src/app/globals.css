@@ -1845,6 +1845,92 @@ input:checked + .slider::before { transform: translateX(20px); background: #fff;
 
 
 /* =============================================
+   REDISEÑO PROFESIONAL — dashboard y proyecciones
+   ============================================= */
+.card { box-shadow: none; border-radius: var(--radius-md); }
+.card:hover { box-shadow: none; }
+.stat-card { box-shadow: none; }
+.stat-value.green, .stat-value.red, .stat-value.orange, .stat-value.blue { color: var(--text-primary); }
+.section-title { font-size: 0.95rem; font-weight: 650; }
+.data-table th { font-weight: 600; letter-spacing: 0.04em; }
+
+/* Hero: flujo libre */
+.hero { display: grid; gap: 22px; padding: 24px; margin-bottom: 16px; }
+@media (min-width: 900px) { .hero { grid-template-columns: minmax(260px, 1fr) 1.4fr; align-items: center; gap: 40px; padding: 28px 32px; } }
+.hero-label { font-size: 0.72rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+.hero-value { font-size: clamp(2.1rem, 8vw, 3rem); font-weight: 700; letter-spacing: -0.035em; line-height: 1.1; margin: 8px 0 6px; font-variant-numeric: tabular-nums; }
+.hero-sub { font-size: 0.82rem; color: var(--text-secondary); }
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.02em; padding: 3px 9px; border-radius: 99px; text-transform: none; }
+.pill.pos { background: var(--green-bg); color: var(--green); }
+.pill.neg { background: var(--red-bg); color: var(--red); }
+.compose-bar { display: flex; height: 10px; border-radius: 99px; overflow: hidden; background: var(--surface-inset); gap: 2px; }
+.compose-bar > span { display: block; height: 100%; min-width: 2px; }
+.compose-legend { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+.compose-legend div { min-width: 0; }
+.compose-legend .k { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--text-secondary); }
+.compose-legend .k i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; flex-shrink: 0; }
+.compose-legend .v { font-size: 0.98rem; font-weight: 650; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.compose-legend .p { font-size: 0.72rem; color: var(--text-muted); }
+
+/* KPI strip */
+.kpi-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+@media (min-width: 760px) { .kpi-grid { grid-template-columns: repeat(4, 1fr); gap: 14px; } }
+.kpi { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 14px 16px; }
+.kpi-label { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); display: flex; align-items: center; gap: 6px; }
+.kpi-label i { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+.kpi-value { font-size: 1.3rem; font-weight: 650; letter-spacing: -0.02em; margin-top: 8px; font-variant-numeric: tabular-nums; }
+.kpi-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 3px; }
+
+/* Proyecciones */
+.proj-head, .proj-row-main { display: grid; grid-template-columns: 1.4fr repeat(3, 1fr) 1.1fr 24px; gap: 12px; align-items: center; }
+.proj-head { padding: 10px 16px; font-size: 0.68rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); }
+.proj-head span:not(:first-child), .proj-num { text-align: right; }
+.proj-row { border-bottom: 1px solid var(--divider); }
+.proj-row:last-child { border-bottom: none; }
+.proj-row-main { width: 100%; padding: 14px 16px; background: none; border: none; cursor: pointer; font-family: var(--font); color: var(--text-primary); text-align: left; font-size: 0.86rem; }
+.proj-row-main:hover { background: var(--surface-inset); }
+.proj-month { font-weight: 600; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.proj-num { font-variant-numeric: tabular-nums; color: var(--text-secondary); }
+.proj-num.flow { font-weight: 650; color: var(--text-primary); }
+.proj-num.flow.neg { color: var(--red); }
+.proj-chev { color: var(--text-muted); display: flex; transition: transform 0.15s ease; }
+.proj-row.open .proj-chev { transform: rotate(90deg); }
+.proj-row.open { background: var(--surface-inset); }
+.proj-detail { padding: 4px 16px 18px; display: grid; gap: 18px; }
+@media (min-width: 900px) { .proj-detail { grid-template-columns: repeat(3, 1fr); } }
+.proj-detail h4 { font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; }
+.proj-line { display: flex; justify-content: space-between; gap: 10px; font-size: 0.82rem; padding: 6px 0; border-bottom: 1px dashed var(--divider); color: var(--text-secondary); }
+.proj-line b { color: var(--text-primary); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.proj-debt-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; }
+.tag-free { font-size: 0.64rem; font-weight: 600; padding: 2px 7px; border-radius: 99px; background: var(--green-bg); color: var(--green); text-transform: none; }
+.proj-mini { display: none; }
+@media (max-width: 759px) {
+  .proj-head { display: none; }
+  .proj-row-main { grid-template-columns: 1fr auto 20px; row-gap: 2px; }
+  .proj-row-main .proj-opt { display: none; }
+  .proj-row-main .proj-num.flow { text-align: right; }
+}
+
+
+/* Proyecciones de deuda */
+.proj-head-debt, .proj-row-debt { grid-template-columns: 1.4fr 0.7fr 1fr 1fr 1.1fr 24px; }
+.proj-detail-debt { grid-template-columns: 1fr !important; gap: 0; padding-top: 0; }
+.proj-debt-row { display: grid; grid-template-columns: 1.4fr 0.7fr 1fr 1fr 1.1fr 24px; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px dashed var(--divider); font-size: 0.84rem; }
+.proj-debt-name { font-weight: 600; min-width: 0; }
+.proj-debt-cell { display: flex; flex-direction: column; text-align: right; gap: 1px; }
+.proj-debt-cell span { display: none; font-size: 0.66rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+.proj-debt-cell b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.proj-debt-total { display: flex; justify-content: space-between; padding: 12px 0 0; font-weight: 650; font-size: 0.88rem; }
+@media (max-width: 759px) {
+  .proj-row-debt { grid-template-columns: 1fr auto 20px; }
+  .proj-mini { display: block; font-size: 0.62rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); }
+  .proj-debt-row { grid-template-columns: 1fr 1fr; row-gap: 8px; }
+  .proj-debt-name { grid-column: 1 / -1; }
+  .proj-debt-cell { text-align: left; }
+  .proj-debt-cell span { display: block; }
+}
+
+/* =============================================
    GRÁFICAS RESPONSIVAS
    ============================================= */
 .dashboard-grid > *, .card { min-width: 0; }
